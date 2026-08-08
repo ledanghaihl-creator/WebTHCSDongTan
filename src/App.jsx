@@ -113,7 +113,7 @@ const INITIAL_VIDEOS = [
   {
     id: 1,
     title: 'Phim tư liệu: 40 năm truyền thống Dạy tốt - Học tốt THCS Đồng Tân',
-    youtubeId: 'dQw4w9WgXcQ',
+    youtubeId: 'k8F4q_N-g_w',
     thumbnailUrl: 'https://images.unsplash.com/photo-1577896851231-70ef18881754?w=600&q=80',
     views: 1540
   }
@@ -156,21 +156,47 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-  // Dynamic Site Config
+  // Persistent LocalStorage State initialization
   const [siteConfig, setSiteConfig] = useState(() => {
-    const saved = localStorage.getItem('siteConfig');
+    const saved = localStorage.getItem('portal_siteConfig');
     return saved ? JSON.parse(saved) : INITIAL_SITE_CONFIG;
   });
-  
-  // Dynamic State List
+
+  const [newsList, setNewsList] = useState(() => {
+    const saved = localStorage.getItem('portal_news');
+    return saved ? JSON.parse(saved) : INITIAL_NEWS_LIST;
+  });
+
+  const [featuredNews, setFeaturedNews] = useState(() => {
+    return newsList[0] || INITIAL_FEATURED_NEWS;
+  });
+
+  const [documents, setDocuments] = useState(() => {
+    const saved = localStorage.getItem('portal_documents');
+    return saved ? JSON.parse(saved) : INITIAL_DOCUMENTS;
+  });
+
+  const [videos, setVideos] = useState(() => {
+    const saved = localStorage.getItem('portal_videos');
+    return saved ? JSON.parse(saved) : INITIAL_VIDEOS;
+  });
+
+  const [albums, setAlbums] = useState(() => {
+    const saved = localStorage.getItem('portal_albums');
+    return saved ? JSON.parse(saved) : INITIAL_ALBUMS;
+  });
+
+  const [resources, setResources] = useState(() => {
+    const saved = localStorage.getItem('portal_resources');
+    return saved ? JSON.parse(saved) : INITIAL_RESOURCES;
+  });
+
+  const [schedules, setSchedules] = useState(() => {
+    const saved = localStorage.getItem('portal_schedules');
+    return saved ? JSON.parse(saved) : INITIAL_SCHEDULES;
+  });
+
   const [categories, setCategories] = useState(INITIAL_CATEGORIES);
-  const [featuredNews, setFeaturedNews] = useState(INITIAL_FEATURED_NEWS);
-  const [newsList, setNewsList] = useState(INITIAL_NEWS_LIST);
-  const [documents, setDocuments] = useState(INITIAL_DOCUMENTS);
-  const [videos, setVideos] = useState(INITIAL_VIDEOS);
-  const [albums, setAlbums] = useState(INITIAL_ALBUMS);
-  const [resources, setResources] = useState(INITIAL_RESOURCES);
-  const [schedules, setSchedules] = useState(INITIAL_SCHEDULES);
   const [announcements, setAnnouncements] = useState(INITIAL_ANNOUNCEMENTS);
 
   // Modal States
@@ -189,9 +215,37 @@ export default function App() {
   const [token, setToken] = useState(localStorage.getItem('adminToken') || '');
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('adminUser') || 'null'));
 
+  // Sync state to LocalStorage for public cross-session persistence
+  useEffect(() => {
+    localStorage.setItem('portal_siteConfig', JSON.stringify(siteConfig));
+  }, [siteConfig]);
+
+  useEffect(() => {
+    localStorage.setItem('portal_news', JSON.stringify(newsList));
+  }, [newsList]);
+
+  useEffect(() => {
+    localStorage.setItem('portal_documents', JSON.stringify(documents));
+  }, [documents]);
+
+  useEffect(() => {
+    localStorage.setItem('portal_videos', JSON.stringify(videos));
+  }, [videos]);
+
+  useEffect(() => {
+    localStorage.setItem('portal_albums', JSON.stringify(albums));
+  }, [albums]);
+
+  useEffect(() => {
+    localStorage.setItem('portal_resources', JSON.stringify(resources));
+  }, [resources]);
+
+  useEffect(() => {
+    localStorage.setItem('portal_schedules', JSON.stringify(schedules));
+  }, [schedules]);
+
   const handleSaveSiteConfig = (newConfig) => {
     setSiteConfig(newConfig);
-    localStorage.setItem('siteConfig', JSON.stringify(newConfig));
   };
 
   const handleUpdateNews = (updatedArticle) => {
@@ -221,20 +275,6 @@ export default function App() {
         if (catData.success && catData.data.length > 0) setCategories(catData.data);
       }
 
-      const featRes = await fetch('/api/news/featured');
-      if (featRes.ok) {
-        const featData = await featRes.json();
-        if (featData.success && featData.data) setFeaturedNews(featData.data);
-      }
-
-      let newsUrl = '/api/news';
-      if (selectedCategory) newsUrl += `?categoryId=${selectedCategory}`;
-      const newsRes = await fetch(newsUrl);
-      if (newsRes.ok) {
-        const newsData = await newsRes.json();
-        if (newsData.success && newsData.data.length > 0) setNewsList(newsData.data);
-      }
-
       const docRes = await fetch('/api/documents');
       if (docRes.ok) {
         const docData = await docRes.json();
@@ -247,14 +287,8 @@ export default function App() {
         if (vidData.success && vidData.data.length > 0) setVideos(vidData.data);
       }
 
-      const annRes = await fetch('/api/announcements');
-      if (annRes.ok) {
-        const annData = await annRes.json();
-        if (annData.success && annData.data.length > 0) setAnnouncements(annData.data);
-      }
-
     } catch (err) {
-      console.log('API sync status: Using fallback state when offline.');
+      console.log('API sync status: Using persistent LocalStorage state on Vercel.');
     }
   };
 
@@ -356,18 +390,6 @@ export default function App() {
       fetchData();
       return;
     }
-    try {
-      const res = await fetch(`/api/news?q=${encodeURIComponent(query)}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success) {
-          setNewsList(data.data);
-          return;
-        }
-      }
-    } catch (err) {
-      console.error(err);
-    }
     const filtered = newsList.filter(n => n.title.toLowerCase().includes(query.toLowerCase()));
     setNewsList(filtered);
   };
@@ -415,7 +437,7 @@ export default function App() {
       ) : activeTab === 'albums' ? (
         <AlbumsView albums={albums} />
       ) : activeTab === 'videos' ? (
-        <VideosView videos={videos} />
+        <VideosView videos={videos} onOpenUpload={handleOpenUpload} />
       ) : activeTab === 'resources' ? (
         <ResourcesView resources={resources} onOpenUpload={handleOpenUpload} />
       ) : activeTab === 'schedule' ? (

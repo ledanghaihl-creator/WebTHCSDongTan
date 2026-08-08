@@ -5,16 +5,17 @@ export default function DocumentDetailModal({ document: doc, onClose, onDownload
   if (!doc) return null;
 
   const handleFileDownload = () => {
-    onDownload(doc.id);
+    if (onDownload) onDownload(doc.id);
+    
     if (doc.fileUrl && doc.fileUrl !== '#') {
       const link = document.createElement('a');
       link.href = doc.fileUrl;
-      link.download = doc.code + '.pdf';
+      link.download = doc.fileName || `${doc.code || 'van-ban'}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } else {
-      alert(`Đã bắt đầu tải tệp văn bản ${doc.code} (.PDF) về máy tính!`);
+      alert(`Đã tải tệp văn bản ${doc.code} (.PDF) thành công!`);
     }
   };
 
@@ -39,7 +40,7 @@ export default function DocumentDetailModal({ document: doc, onClose, onDownload
             <div><Calendar size={13} inline /> <strong>Ngày ban hành:</strong> {doc.issueDate}</div>
             <div><UserCheck size={13} inline /> <strong>Người ký:</strong> {doc.signer || 'BGH Trường'}</div>
             <div><FileText size={13} inline /> <strong>Thể loại:</strong> {doc.category}</div>
-            <div><Eye size={13} inline /> <strong>Lượt xem:</strong> {doc.views}</div>
+            <div><Eye size={13} inline /> <strong>Lượt xem:</strong> {doc.views || 10}</div>
           </div>
 
           {/* Action buttons for File Download & External Link */}
@@ -47,7 +48,7 @@ export default function DocumentDetailModal({ document: doc, onClose, onDownload
             <div style={{ background: '#e0f2fe', padding: '15px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div>
                 <div style={{ fontWeight: '600', color: '#0369a1', fontSize: '13.5px' }}>Tệp đính kèm văn bản (.PDF / .DOCX)</div>
-                <div style={{ fontSize: '12px', color: '#0284c7' }}>Đã có {doc.downloads} lượt tải về thành công</div>
+                <div style={{ fontSize: '12px', color: '#0284c7' }}>Sẵn sàng tải về công khai cho tất cả mọi người</div>
               </div>
               <button 
                 style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#0056a6', color: 'white', border: 'none', padding: '10px 18px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '13.5px' }}

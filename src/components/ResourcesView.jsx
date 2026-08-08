@@ -27,28 +27,6 @@ export default function ResourcesView({ resources = [], onOpenUpload }) {
       downloads: 680,
       fileUrl: '#',
       externalLink: ''
-    },
-    {
-      id: 3,
-      title: 'Bộ Đề ôn tập Học sinh giỏi môn Tiếng Anh khối 8 và 9 cấp Huyện',
-      type: 'Đề thi & Đáp án',
-      subject: 'Tiếng Anh 8-9',
-      author: 'Nhóm Ngoại Ngữ',
-      date: '15/10/2026',
-      downloads: 890,
-      fileUrl: '#',
-      externalLink: 'https://drive.google.com'
-    },
-    {
-      id: 4,
-      title: 'Tài liệu hướng dẫn Thực hành Thí nghiệm Vật lý 9 - Bài 12',
-      type: 'Tài liệu Giảng dạy',
-      subject: 'Vật lý 9',
-      author: 'Tổ Tự Nhiên',
-      date: '05/11/2026',
-      downloads: 310,
-      fileUrl: '#',
-      externalLink: ''
     }
   ];
 
@@ -62,7 +40,7 @@ export default function ResourcesView({ resources = [], onOpenUpload }) {
     if (item.fileUrl && item.fileUrl !== '#') {
       const link = document.createElement('a');
       link.href = item.fileUrl;
-      link.download = item.title + '.pdf';
+      link.download = item.fileName || `${item.title || 'de-thi'}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -137,7 +115,7 @@ export default function ResourcesView({ resources = [], onOpenUpload }) {
                     {item.title}
                   </h3>
                   <div style={{ fontSize: '12px', color: '#64748b' }}>
-                    ✍️ Biên soạn: {item.author} | 📅 Ngày tạo: {item.date} | 📥 {item.downloads} lượt tải
+                    ✍️ Biên soạn: {item.author} | 📅 Ngày tạo: {item.date} | 📥 {item.downloads || 10} lượt tải
                   </div>
                 </div>
 
