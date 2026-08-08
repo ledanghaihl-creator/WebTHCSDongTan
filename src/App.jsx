@@ -18,7 +18,7 @@ import ScheduleView from './components/ScheduleView';
 import ContactView from './components/ContactView';
 import Footer from './components/Footer';
 
-// Initial Fallback Site Config with Attached School Courtyard Banner
+// Initial Fallback Site Config with Official School Logo & Courtyard Banner
 const INITIAL_SITE_CONFIG = {
   schoolName: 'TRƯỜNG THCS ĐỒNG TÂN',
   governingBody: 'ỦY BAN NHÂN DÂN XÃ HỮU LŨNG - TỈNH LẠNG SƠN',
@@ -26,7 +26,7 @@ const INITIAL_SITE_CONFIG = {
   address: 'Xã Hữu Lũng - Tỉnh Lạng Sơn',
   phone: '(0205) 3885.6789',
   email: 'thcsdongtan.huulung@langson.edu.vn',
-  logoUrl: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=300&q=80',
+  logoUrl: '/images/school-logo.jpg',
   bannerBg: '/images/school-banner.png'
 };
 

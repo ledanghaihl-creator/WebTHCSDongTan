@@ -7,10 +7,11 @@ export default function HeaderBanner({ siteConfig }) {
   const slogan = config.slogan || 'HỘI TỤ - KẾT TINH - TỎA SÁNG';
   const address = config.address || 'Xã Hữu Lũng - Tỉnh Lạng Sơn';
   const phone = config.phone || '(0205) 3885.6789';
-  const logoUrl = config.logoUrl || 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=300&q=80';
   
-  // Custom background or default school courtyard image
+  // Official school logo and background
+  const logoUrl = config.logoUrl || '/images/school-logo.jpg';
   const bannerImage = config.bannerBg || '/images/school-banner.png';
+  
   const bannerStyle = {
     backgroundImage: `linear-gradient(rgba(0, 40, 85, 0.75), rgba(0, 78, 124, 0.82)), url('${bannerImage}')`,
     backgroundSize: 'cover',
@@ -22,7 +23,7 @@ export default function HeaderBanner({ siteConfig }) {
       <div className="header-content">
         <img 
           src={logoUrl} 
-          alt="Logo THCS Đồng Tân" 
+          alt="Logo TRƯỜNG THCS ĐỒNG TÂN - 1954" 
           className="school-logo" 
         />
         <div className="header-text">
