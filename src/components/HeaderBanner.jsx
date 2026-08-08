@@ -1,35 +1,44 @@
 import React from 'react';
 
 export default function HeaderBanner({ siteConfig }) {
-  const config = siteConfig || {
-    schoolName: 'TRƯỜNG THCS ĐỒNG TÂN',
-    governingBody: 'ỦY BAN NHÂN DÂN XÃ HỮU LŨNG - TỈNH LẠNG SƠN',
-    slogan: 'HỘI TỤ - KẾT TINH - TỎA SÁNG',
-    address: 'Xã Hữu Lũng - Tỉnh Lạng Sơn',
-    phone: '(0205) 3885.6789',
-    email: 'thcsdongtan.huulung@langson.edu.vn',
-    logoUrl: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=300&q=80',
-    bannerBg: ''
+  const config = siteConfig || {};
+  const schoolName = config.schoolName || 'TRƯỜNG THCS ĐỒNG TÂN';
+  const governingBody = config.governingBody || 'ỦY BAN NHÂN DÂN XÃ HỮU LŨNG - TỈNH LẠNG SƠN';
+  const slogan = config.slogan || 'HỘI TỤ - KẾT TINH - TỎA SÁNG';
+  const address = config.address || 'Xã Hữu Lũng - Tỉnh Lạng Sơn';
+  const phone = config.phone || '(0205) 3885.6789';
+  const logoUrl = config.logoUrl || 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=300&q=80';
+  
+  // Custom background or default school courtyard image
+  const bannerImage = config.bannerBg || '/images/school-banner.png';
+  const bannerStyle = {
+    backgroundImage: `linear-gradient(rgba(0, 40, 85, 0.75), rgba(0, 78, 124, 0.82)), url('${bannerImage}')`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center center'
   };
 
   return (
-    <header className="header-banner" style={config.bannerBg ? { backgroundImage: `url(${config.bannerBg})`, backgroundSize: 'cover' } : {}}>
+    <header className="header-banner" style={bannerStyle}>
       <div className="header-content">
         <img 
-          src={config.logoUrl || "https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=300&q=80"} 
+          src={logoUrl} 
           alt="Logo THCS Đồng Tân" 
           className="school-logo" 
         />
         <div className="header-text">
-          {config.governingBody && (
-            <div style={{ fontSize: '11px', color: '#e0f2fe', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '2px', fontWeight: '600' }}>
-              {config.governingBody}
+          {governingBody && (
+            <div style={{ fontSize: '12px', color: '#e0f2fe', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '2px', fontWeight: '700', textShadow: '1px 1px 3px rgba(0,0,0,0.6)' }}>
+              {governingBody}
             </div>
           )}
-          <h1 className="school-title">{config.schoolName}</h1>
-          <div className="school-slogan">{config.slogan}</div>
-          <div className="school-address">
-            📍 Địa chỉ: {config.address} | 📞 Điện thoại: {config.phone}
+          <h1 className="school-title" style={{ fontSize: '28px', textShadow: '2px 2px 6px rgba(0,0,0,0.8)' }}>
+            {schoolName}
+          </h1>
+          <div className="school-slogan" style={{ color: '#fbbf24', textShadow: '1px 1px 4px rgba(0,0,0,0.8)', fontWeight: '800' }}>
+            {slogan}
+          </div>
+          <div className="school-address" style={{ textShadow: '1px 1px 3px rgba(0,0,0,0.7)', color: '#f8fafc', fontWeight: '500' }}>
+            📍 Địa chỉ: {address} | 📞 Điện thoại: {phone}
           </div>
         </div>
       </div>

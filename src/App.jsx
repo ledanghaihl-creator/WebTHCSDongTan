@@ -18,7 +18,7 @@ import ScheduleView from './components/ScheduleView';
 import ContactView from './components/ContactView';
 import Footer from './components/Footer';
 
-// Initial Fallback Site Config
+// Initial Fallback Site Config with Attached School Courtyard Banner
 const INITIAL_SITE_CONFIG = {
   schoolName: 'TRƯỜNG THCS ĐỒNG TÂN',
   governingBody: 'ỦY BAN NHÂN DÂN XÃ HỮU LŨNG - TỈNH LẠNG SƠN',
@@ -27,7 +27,7 @@ const INITIAL_SITE_CONFIG = {
   phone: '(0205) 3885.6789',
   email: 'thcsdongtan.huulung@langson.edu.vn',
   logoUrl: 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=300&q=80',
-  bannerBg: ''
+  bannerBg: '/images/school-banner.png'
 };
 
 // Initial Fallback Data
@@ -125,7 +125,7 @@ const INITIAL_ALBUMS = [
     title: 'Album: Lễ Khai giảng năm học 2026 - 2027 THCS Đồng Tân',
     date: '05/09/2026',
     photosCount: 18,
-    cover: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&q=80',
+    cover: '/images/school-banner.png',
     description: 'Hình ảnh rực rỡ cờ hoa trong ngày hội Khai trường.'
   }
 ];
