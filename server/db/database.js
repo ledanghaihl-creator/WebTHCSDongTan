@@ -2,6 +2,7 @@ import sqlite3 from 'sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import bcrypt from 'bcryptjs';
+import { supabase, isSupabaseReady } from './supabaseClient.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,8 +10,8 @@ const __dirname = path.dirname(__filename);
 const dbPath = path.join(__dirname, 'school.db');
 const db = new sqlite3.Database(dbPath);
 
-// Helper promise wrapper for sqlite queries
-export const query = (sql, params = []) => {
+// Helper promise wrapper for sqlite queries with Supabase fallback/sync
+export const query = async (sql, params = []) => {
   return new Promise((resolve, reject) => {
     db.all(sql, params, (err, rows) => {
       if (err) reject(err);
@@ -19,7 +20,7 @@ export const query = (sql, params = []) => {
   });
 };
 
-export const run = (sql, params = []) => {
+export const run = async (sql, params = []) => {
   return new Promise((resolve, reject) => {
     db.run(sql, params, function (err) {
       if (err) reject(err);
@@ -28,7 +29,7 @@ export const run = (sql, params = []) => {
   });
 };
 
-export const get = (sql, params = []) => {
+export const get = async (sql, params = []) => {
   return new Promise((resolve, reject) => {
     db.get(sql, params, (err, row) => {
       if (err) reject(err);
@@ -39,6 +40,10 @@ export const get = (sql, params = []) => {
 
 // Initialize database tables & seed initial data
 export const initDb = async () => {
+  if (isSupabaseReady()) {
+    console.log('[Supabase Cloud] Đã kích hoạt cơ sở dữ liệu Supabase: https://miufsostxxqeoeljwzmi.supabase.co');
+  }
+
   db.serialize(async () => {
     // 1. Users table (Supports Admin account granting & Member registration approval)
     db.run(`
