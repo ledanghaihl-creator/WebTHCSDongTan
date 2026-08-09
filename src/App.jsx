@@ -17,8 +17,9 @@ import ResourcesView from './components/ResourcesView';
 import ScheduleView from './components/ScheduleView';
 import ContactView from './components/ContactView';
 import Footer from './components/Footer';
+import { supabase } from './lib/supabaseClient';
 
-// Initial Fallback Site Config with Official School Logo & Courtyard Banner
+// Initial Fallback Site Config
 const INITIAL_SITE_CONFIG = {
   schoolName: 'TRƯỜNG THCS ĐỒNG TÂN',
   governingBody: 'ỦY BAN NHÂN DÂN XÃ HỮU LŨNG - TỈNH LẠNG SƠN',
@@ -131,53 +132,16 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-  // Persistent LocalStorage State initialization
-  const [siteConfig, setSiteConfig] = useState(() => {
-    const saved = localStorage.getItem('portal_siteConfig');
-    return saved ? JSON.parse(saved) : INITIAL_SITE_CONFIG;
-  });
-
-  const [newsList, setNewsList] = useState(() => {
-    const saved = localStorage.getItem('portal_news');
-    return saved ? JSON.parse(saved) : INITIAL_NEWS_LIST;
-  });
-
-  const [featuredNews, setFeaturedNews] = useState(() => {
-    return newsList[0] || INITIAL_FEATURED_NEWS;
-  });
-
-  const [documents, setDocuments] = useState(() => {
-    const saved = localStorage.getItem('portal_documents');
-    return saved ? JSON.parse(saved) : INITIAL_DOCUMENTS;
-  });
-
-  const [videos, setVideos] = useState(() => {
-    const saved = localStorage.getItem('portal_videos');
-    return saved ? JSON.parse(saved) : INITIAL_VIDEOS;
-  });
-
-  const [albums, setAlbums] = useState(() => {
-    const saved = localStorage.getItem('portal_albums');
-    return saved ? JSON.parse(saved) : INITIAL_ALBUMS;
-  });
-
-  const [resources, setResources] = useState(() => {
-    const saved = localStorage.getItem('portal_resources');
-    return saved ? JSON.parse(saved) : INITIAL_RESOURCES;
-  });
-
-  const [schedules, setSchedules] = useState(() => {
-    const saved = localStorage.getItem('portal_schedules');
-    return saved ? JSON.parse(saved) : INITIAL_SCHEDULES;
-  });
-
-  const [pendingUsers, setPendingUsers] = useState(() => {
-    const saved = localStorage.getItem('portal_pending_users');
-    return saved ? JSON.parse(saved) : [
-      { id: 101, username: 'hocsinh01', fullName: 'Em Nguyễn Văn An', role: 'HOC_SINH', email: 'an.nguyen@thcsdongtan.edu.vn', status: 'PENDING', createdAt: '09/08/2026' }
-    ];
-  });
-
+  // Global Dynamic Site State
+  const [siteConfig, setSiteConfig] = useState(INITIAL_SITE_CONFIG);
+  const [newsList, setNewsList] = useState(INITIAL_NEWS_LIST);
+  const [featuredNews, setFeaturedNews] = useState(INITIAL_FEATURED_NEWS);
+  const [documents, setDocuments] = useState(INITIAL_DOCUMENTS);
+  const [videos, setVideos] = useState(INITIAL_VIDEOS);
+  const [albums, setAlbums] = useState(INITIAL_ALBUMS);
+  const [resources, setResources] = useState(INITIAL_RESOURCES);
+  const [schedules, setSchedules] = useState(INITIAL_SCHEDULES);
+  const [pendingUsers, setPendingUsers] = useState([]);
   const [categories, setCategories] = useState(INITIAL_CATEGORIES);
   const [announcements, setAnnouncements] = useState(INITIAL_ANNOUNCEMENTS);
 
@@ -197,102 +161,253 @@ export default function App() {
   const [token, setToken] = useState(localStorage.getItem('adminToken') || '');
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('adminUser') || 'null'));
 
-  // Sync state to LocalStorage
-  useEffect(() => {
-    localStorage.setItem('portal_siteConfig', JSON.stringify(siteConfig));
-  }, [siteConfig]);
+  // Main Live Data Fetcher from Supabase Cloud Postgres
+  const fetchCloudData = async () => {
+    if (!supabase) return;
 
-  useEffect(() => {
-    localStorage.setItem('portal_news', JSON.stringify(newsList));
-  }, [newsList]);
+    try {
+      const [
+        { data: artData },
+        { data: docData },
+        { data: resData },
+        { data: vidData },
+        { data: albData },
+        { data: schData },
+        { data: cfgData },
+        { data: usrData }
+      ] = await Promise.all([
+        supabase.from('articles').select('*').order('id', { ascending: false }),
+        supabase.from('documents').select('*').order('id', { ascending: false }),
+        supabase.from('resources').select('*').order('id', { ascending: false }),
+        supabase.from('videos').select('*').order('id', { ascending: false }),
+        supabase.from('albums').select('*').order('id', { ascending: false }),
+        supabase.from('schedules').select('*').order('id', { ascending: false }),
+        supabase.from('site_config').select('*').eq('id', 1).maybeSingle(),
+        supabase.from('users').select('*').order('id', { ascending: false })
+      ]);
 
-  useEffect(() => {
-    localStorage.setItem('portal_documents', JSON.stringify(documents));
-  }, [documents]);
+      if (artData && artData.length > 0) {
+        const mappedArticles = artData.map(a => ({
+          id: a.id,
+          title: a.title,
+          slug: a.slug,
+          categoryId: a.category_id || 1,
+          categoryName: a.category_name || 'Tin tức - Sự kiện',
+          summary: a.summary,
+          content: a.content,
+          image: a.image,
+          fileUrl: a.file_url,
+          externalLink: a.external_link,
+          author: a.author,
+          isFeatured: a.is_featured,
+          views: a.views,
+          createdAt: a.created_at ? new Date(a.created_at).toLocaleDateString('vi-VN') : 'Gần đây'
+        }));
+        setNewsList(mappedArticles);
+        setFeaturedNews(mappedArticles.find(a => a.isFeatured === 1) || mappedArticles[0]);
+      }
 
-  useEffect(() => {
-    localStorage.setItem('portal_videos', JSON.stringify(videos));
-  }, [videos]);
+      if (docData && docData.length > 0) {
+        setDocuments(docData.map(d => ({
+          id: d.id,
+          code: d.code,
+          title: d.title,
+          category: d.category,
+          issueDate: d.issue_date,
+          signer: d.signer,
+          fileUrl: d.file_url,
+          fileName: d.file_name,
+          externalLink: d.external_link,
+          views: d.views,
+          downloads: d.downloads
+        })));
+      }
 
-  useEffect(() => {
-    localStorage.setItem('portal_albums', JSON.stringify(albums));
-  }, [albums]);
+      if (resData && resData.length > 0) {
+        setResources(resData.map(r => ({
+          id: r.id,
+          title: r.title,
+          type: r.type,
+          subject: r.subject,
+          author: r.author,
+          date: r.date,
+          downloads: r.downloads,
+          fileUrl: r.file_url,
+          fileName: r.file_name,
+          externalLink: r.external_link
+        })));
+      }
 
-  useEffect(() => {
-    localStorage.setItem('portal_resources', JSON.stringify(resources));
-  }, [resources]);
+      if (vidData && vidData.length > 0) {
+        setVideos(vidData.map(v => ({
+          id: v.id,
+          title: v.title,
+          youtubeId: v.youtube_id,
+          videoUrl: v.video_url,
+          thumbnailUrl: v.thumbnail_url,
+          externalLink: v.external_link,
+          views: v.views
+        })));
+      }
 
-  useEffect(() => {
-    localStorage.setItem('portal_schedules', JSON.stringify(schedules));
-  }, [schedules]);
+      if (albData && albData.length > 0) {
+        setAlbums(albData.map(a => ({
+          id: a.id,
+          title: a.title,
+          date: a.date,
+          photosCount: a.photos_count,
+          cover: a.cover,
+          description: a.description,
+          fileUrl: a.file_url,
+          externalLink: a.external_link
+        })));
+      }
 
-  useEffect(() => {
-    localStorage.setItem('portal_pending_users', JSON.stringify(pendingUsers));
-  }, [pendingUsers]);
+      if (schData && schData.length > 0) {
+        setSchedules(schData.map(s => ({
+          id: s.id,
+          day: s.day_title,
+          time: s.time_slot,
+          content: s.content,
+          leader: s.leader
+        })));
+      }
 
-  const handleSaveSiteConfig = (newConfig) => {
-    setSiteConfig(newConfig);
+      if (cfgData) {
+        setSiteConfig({
+          schoolName: cfgData.school_name || INITIAL_SITE_CONFIG.schoolName,
+          governingBody: cfgData.governing_body || INITIAL_SITE_CONFIG.governingBody,
+          slogan: cfgData.slogan || INITIAL_SITE_CONFIG.slogan,
+          address: cfgData.address || INITIAL_SITE_CONFIG.address,
+          phone: cfgData.phone || INITIAL_SITE_CONFIG.phone,
+          email: cfgData.email || INITIAL_SITE_CONFIG.email,
+          logoUrl: cfgData.logo_url || INITIAL_SITE_CONFIG.logoUrl,
+          bannerBg: cfgData.banner_bg || INITIAL_SITE_CONFIG.bannerBg
+        });
+      }
+
+      if (usrData && usrData.length > 0) {
+        const pendings = usrData.filter(u => u.status === 'PENDING').map(u => ({
+          id: u.id,
+          username: u.username,
+          fullName: u.full_name,
+          role: u.role,
+          email: u.email,
+          status: u.status,
+          createdAt: u.created_at ? new Date(u.created_at).toLocaleDateString('vi-VN') : 'Gần đây'
+        }));
+        setPendingUsers(pendings);
+      }
+    } catch (err) {
+      console.error('Lỗi kết nối Supabase Cloud:', err);
+    }
   };
 
-  const handleUpdateNews = (updatedArticle) => {
+  useEffect(() => {
+    fetchCloudData();
+    // Auto sync Cloud Postgres every 10 seconds for real-time multi-device access
+    const interval = setInterval(fetchCloudData, 10000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleSaveSiteConfig = async (newConfig) => {
+    setSiteConfig(newConfig);
+    if (supabase) {
+      try {
+        await supabase.from('site_config').upsert({
+          id: 1,
+          school_name: newConfig.schoolName,
+          governing_body: newConfig.governingBody,
+          slogan: newConfig.slogan,
+          address: newConfig.address,
+          phone: newConfig.phone,
+          email: newConfig.email,
+          logo_url: newConfig.logoUrl,
+          banner_bg: newConfig.bannerBg,
+          updated_at: new Date().toISOString()
+        });
+      } catch (err) {}
+    }
+  };
+
+  const handleUpdateNews = async (updatedArticle) => {
     setNewsList(prev => prev.map(a => a.id === updatedArticle.id ? updatedArticle : a));
     if (featuredNews?.id === updatedArticle.id) {
       setFeaturedNews(updatedArticle);
     }
+    if (supabase) {
+      try {
+        await supabase.from('articles').update({
+          title: updatedArticle.title,
+          summary: updatedArticle.summary,
+          content: updatedArticle.content,
+          image: updatedArticle.image,
+          file_url: updatedArticle.fileUrl,
+          external_link: updatedArticle.externalLink
+        }).eq('id', updatedArticle.id);
+      } catch (err) {}
+    }
   };
 
-  const handleDeleteNews = (articleId) => {
+  const handleDeleteNews = async (articleId) => {
     setNewsList(prev => prev.filter(a => a.id !== articleId));
+    if (supabase) {
+      try {
+        await supabase.from('articles').delete().eq('id', articleId);
+      } catch (err) {}
+    }
   };
 
-  const handleUpdateDocument = (updatedDoc) => {
+  const handleUpdateDocument = async (updatedDoc) => {
     setDocuments(prev => prev.map(d => d.id === updatedDoc.id ? updatedDoc : d));
+    if (supabase) {
+      try {
+        await supabase.from('documents').update({
+          code: updatedDoc.code,
+          title: updatedDoc.title,
+          category: updatedDoc.category,
+          issue_date: updatedDoc.issueDate,
+          signer: updatedDoc.signer,
+          file_url: updatedDoc.fileUrl,
+          external_link: updatedDoc.externalLink
+        }).eq('id', updatedDoc.id);
+      } catch (err) {}
+    }
   };
 
-  const handleDeleteDocument = (docId) => {
+  const handleDeleteDocument = async (docId) => {
     setDocuments(prev => prev.filter(d => d.id !== docId));
+    if (supabase) {
+      try {
+        await supabase.from('documents').delete().eq('id', docId);
+      } catch (err) {}
+    }
   };
 
   const handleRegisterSuccess = (newPendingUser) => {
     setPendingUsers(prev => [newPendingUser, ...prev]);
+    fetchCloudData();
   };
 
-  const handleApproveUser = (userId) => {
+  const handleApproveUser = async (userId) => {
     setPendingUsers(prev => prev.filter(u => u.id !== userId));
+    if (supabase) {
+      try {
+        await supabase.from('users').update({ status: 'ACTIVE' }).eq('id', userId);
+      } catch (err) {}
+    }
+    fetchCloudData();
   };
 
-  const handleRejectUser = (userId) => {
+  const handleRejectUser = async (userId) => {
     setPendingUsers(prev => prev.filter(u => u.id !== userId));
+    if (supabase) {
+      try {
+        await supabase.from('users').delete().eq('id', userId);
+      } catch (err) {}
+    }
+    fetchCloudData();
   };
-
-  const fetchData = async () => {
-    try {
-      const catRes = await fetch('/api/news/categories');
-      if (catRes.ok) {
-        const catData = await catRes.json();
-        if (catData.success && catData.data.length > 0) setCategories(catData.data);
-      }
-
-      const docRes = await fetch('/api/documents');
-      if (docRes.ok) {
-        const docData = await docRes.json();
-        if (docData.success && docData.data.length > 0) setDocuments(docData.data);
-      }
-
-      const userRes = await fetch('/api/auth/users');
-      if (userRes.ok) {
-        const userData = await userRes.json();
-        if (userData.success && userData.data) {
-          const pendings = userData.data.filter(u => u.status === 'PENDING');
-          if (pendings.length > 0) setPendingUsers(pendings);
-        }
-      }
-    } catch (err) {}
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, [selectedCategory]);
 
   const handleAddNewItem = (type, newItem) => {
     if (type === 'docs') {
@@ -315,6 +430,7 @@ export default function App() {
       setSchedules(prev => [newItem, ...prev]);
       setActiveTab('schedule');
     }
+    fetchCloudData();
   };
 
   const handleOpenUpload = (tab = 'docs') => {
@@ -323,17 +439,6 @@ export default function App() {
   };
 
   const handleSelectArticle = async (id) => {
-    try {
-      const res = await fetch(`/api/news/${id}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.data) {
-          setActiveArticle(data.data);
-          setSelectedArticleId(id);
-          return;
-        }
-      }
-    } catch (err) {}
     const found = newsList.find(n => n.id === id);
     if (found) {
       setActiveArticle(found);
@@ -342,17 +447,6 @@ export default function App() {
   };
 
   const handleSelectDocument = async (id) => {
-    try {
-      const res = await fetch(`/api/documents/${id}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.data) {
-          setActiveDocument(data.data);
-          setSelectedDocumentId(id);
-          return;
-        }
-      }
-    } catch (err) {}
     const found = documents.find(d => d.id === id);
     if (found) {
       setActiveDocument(found);
@@ -361,10 +455,14 @@ export default function App() {
   };
 
   const handleDownloadDocument = async (id) => {
-    try {
-      await fetch(`/api/documents/${id}/download`, { method: 'POST' });
-      fetchData();
-    } catch (err) {}
+    if (supabase) {
+      try {
+        const target = documents.find(d => d.id === id);
+        if (target) {
+          await supabase.from('documents').update({ downloads: (target.downloads || 0) + 1 }).eq('id', id);
+        }
+      } catch (err) {}
+    }
   };
 
   const handleLoginSuccess = (newToken, newUser) => {
@@ -383,7 +481,7 @@ export default function App() {
 
   const handleSearch = async (query) => {
     if (!query) {
-      fetchData();
+      fetchCloudData();
       return;
     }
     const filtered = newsList.filter(n => n.title.toLowerCase().includes(query.toLowerCase()));
@@ -428,7 +526,7 @@ export default function App() {
             onDeleteNews={handleDeleteNews}
             onUpdateDocument={handleUpdateDocument}
             onDeleteDocument={handleDeleteDocument}
-            onRefreshData={fetchData}
+            onRefreshData={fetchCloudData}
           />
         </div>
       ) : activeTab === 'intro' ? (

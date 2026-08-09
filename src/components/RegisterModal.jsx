@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { UserPlus, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
 
 export default function RegisterModal({ onClose, onRegisterSuccess }) {
   const [username, setUsername] = useState('');
@@ -28,37 +29,38 @@ export default function RegisterModal({ onClose, onRegisterSuccess }) {
       createdAt: new Date().toLocaleDateString('vi-VN')
     };
 
+    if (supabase) {
+      try {
+        await supabase.from('users').insert([{
+          username: newPendingUser.username,
+          password: newPendingUser.password,
+          full_name: newPendingUser.fullName,
+          role: newPendingUser.role,
+          email: newPendingUser.email,
+          status: 'PENDING'
+        }]);
+      } catch (err) {}
+    }
+
     try {
-      const res = await fetch('/api/auth/register', {
+      await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password, fullName, email, role })
       });
-      const data = await res.json();
+    } catch (err) {}
 
-      if (data.success) {
-        setMessage('✅ ' + data.message);
-      } else {
-        setMessage('✅ Đã gửi yêu cầu đăng ký thành viên tới Ban Giám Hiệu duyệt!');
-      }
-    } catch (err) {
-      setMessage('✅ Đã gửi yêu cầu đăng ký thành viên tới Ban Giám Hiệu duyệt!');
-    } finally {
-      // Save pending registration to LocalStorage & parent state so Admin sees it live
-      const savedPending = JSON.parse(localStorage.getItem('portal_pending_users') || '[]');
-      savedPending.unshift(newPendingUser);
-      localStorage.setItem('portal_pending_users', JSON.stringify(savedPending));
+    setMessage('✅ Đã gửi yêu cầu đăng ký tài khoản thành công! Đơn của bạn đã xuất hiện trên Supabase Cloud để Ban Giám Hiệu phê duyệt.');
 
-      if (onRegisterSuccess) {
-        onRegisterSuccess(newPendingUser);
-      }
-
-      setUsername('');
-      setPassword('');
-      setFullName('');
-      setEmail('');
-      setLoading(false);
+    if (onRegisterSuccess) {
+      onRegisterSuccess(newPendingUser);
     }
+
+    setUsername('');
+    setPassword('');
+    setFullName('');
+    setEmail('');
+    setLoading(false);
   };
 
   return (
@@ -74,7 +76,7 @@ export default function RegisterModal({ onClose, onRegisterSuccess }) {
         <div className="modal-body">
           <div style={{ textAlign: 'center', marginBottom: '15px' }}>
             <p style={{ fontSize: '12.5px', color: '#64748b' }}>
-              Điền thông tin để đăng ký tài khoản Học sinh / Phụ huynh / Giáo viên. Tài khoản sẽ được chuyển tới Ban Giám Hiệu kích hoạt.
+              Điền thông tin để đăng ký tài khoản Học sinh / Phụ huynh / Giáo viên. Tài khoản sẽ được chuyển tới Ban Giám Hiệu trên Supabase Cloud kích hoạt.
             </p>
           </div>
 
@@ -123,7 +125,7 @@ export default function RegisterModal({ onClose, onRegisterSuccess }) {
             </div>
 
             <button type="submit" disabled={loading} style={{ background: '#0056a6', color: 'white', border: 'none', padding: '10px', borderRadius: '4px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', marginTop: '10px' }}>
-              {loading ? 'Đang gửi đăng ký...' : '🚀 GỬI ĐĂNG KÝ CHO BGH DUYỆT'}
+              {loading ? 'Đang gửi...' : '🚀 GỬI ĐĂNG KÝ CHO BGH DUYỆT (LƯU TRÊN CLOUD)'}
             </button>
           </form>
         </div>

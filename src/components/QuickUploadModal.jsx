@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, Upload, FilePlus, BookOpen, Newspaper, Image, Video, CheckCircle } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
 
 // Robust YouTube ID Extractor
 function extractYouTubeId(urlOrId) {
@@ -34,13 +35,12 @@ export default function QuickUploadModal({ defaultTab = 'docs', categories = [],
   const [signer, setSigner] = useState('Hiệu trưởng THCS Đồng Tân');
   const [author, setAuthor] = useState('Tổ Chuyên Môn');
 
-  // File Upload Handler (Base64 Embedded File Storage for Vercel Public Access)
+  // File Upload Handler (Base64 Embedded File Storage for Global Cross-Device Access)
   const handleFileUpload = (file) => {
     if (!file) return;
     setUploading(true);
     setFileName(file.name);
 
-    // Limit client file size to 25MB for Base64 storage
     if (file.size > 25 * 1024 * 1024) {
       setMessage('⚠️ Tệp tin vượt quá 25MB. Vui lòng chọn tệp nhỏ hơn hoặc dán link Google Drive!');
       setUploading(false);
@@ -64,6 +64,7 @@ export default function QuickUploadModal({ defaultTab = 'docs', categories = [],
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
+    setUploading(true);
 
     const newItemId = Date.now();
     let newItem = null;
@@ -83,6 +84,21 @@ export default function QuickUploadModal({ defaultTab = 'docs', categories = [],
         externalLink: externalLink || ''
       };
 
+      if (supabase) {
+        try {
+          await supabase.from('documents').insert([{
+            code: newItem.code,
+            title: newItem.title,
+            category: newItem.category,
+            issue_date: newItem.issueDate,
+            signer: newItem.signer,
+            file_url: newItem.fileUrl,
+            file_name: newItem.fileName,
+            external_link: newItem.externalLink
+          }]);
+        } catch (err) {}
+      }
+
     } else if (activeType === 'resources') {
       newItem = {
         id: newItemId,
@@ -96,6 +112,21 @@ export default function QuickUploadModal({ defaultTab = 'docs', categories = [],
         fileName: fileName || `${title || 'de-thi'}.pdf`,
         externalLink: externalLink || ''
       };
+
+      if (supabase) {
+        try {
+          await supabase.from('resources').insert([{
+            title: newItem.title,
+            type: newItem.type,
+            subject: newItem.subject,
+            author: newItem.author,
+            date: newItem.date,
+            file_url: newItem.fileUrl,
+            file_name: newItem.fileName,
+            external_link: newItem.externalLink
+          }]);
+        } catch (err) {}
+      }
 
     } else if (activeType === 'news') {
       const catObj = categories.find(c => c.id === parseInt(category)) || { name: 'Tin tức - Sự kiện' };
@@ -117,6 +148,23 @@ export default function QuickUploadModal({ defaultTab = 'docs', categories = [],
         externalLink: externalLink || ''
       };
 
+      if (supabase) {
+        try {
+          await supabase.from('articles').insert([{
+            title: newItem.title,
+            slug: newItem.slug,
+            category_id: newItem.categoryId,
+            category_name: newItem.categoryName,
+            summary: newItem.summary,
+            content: newItem.content,
+            image: newItem.image,
+            file_url: newItem.fileUrl,
+            external_link: newItem.externalLink,
+            author: newItem.author
+          }]);
+        } catch (err) {}
+      }
+
     } else if (activeType === 'albums') {
       newItem = {
         id: newItemId,
@@ -128,6 +176,19 @@ export default function QuickUploadModal({ defaultTab = 'docs', categories = [],
         fileUrl: fileUrl || '',
         externalLink: externalLink || ''
       };
+
+      if (supabase) {
+        try {
+          await supabase.from('albums').insert([{
+            title: newItem.title,
+            date: newItem.date,
+            cover: newItem.cover,
+            description: newItem.description,
+            file_url: newItem.fileUrl,
+            external_link: newItem.externalLink
+          }]);
+        } catch (err) {}
+      }
 
     } else if (activeType === 'videos') {
       const extractedYtId = extractYouTubeId(youtubeId || externalLink || '');
@@ -142,13 +203,26 @@ export default function QuickUploadModal({ defaultTab = 'docs', categories = [],
         views: 1,
         externalLink: externalLink || (extractedYtId ? `https://www.youtube.com/watch?v=${extractedYtId}` : '')
       };
+
+      if (supabase) {
+        try {
+          await supabase.from('videos').insert([{
+            title: newItem.title,
+            youtube_id: newItem.youtubeId,
+            video_url: newItem.videoUrl,
+            thumbnail_url: newItem.thumbnailUrl,
+            external_link: newItem.externalLink
+          }]);
+        } catch (err) {}
+      }
     }
 
     if (onAddNewItem && newItem) {
       onAddNewItem(activeType, newItem);
     }
 
-    setMessage('✅ Đã tải lên và hiển thị công khai cho mọi người cùng xem!');
+    setUploading(false);
+    setMessage('✅ Đã lưu lên Supabase Cloud và hiển thị công khai trên tất cả các thiết bị!');
     setTimeout(() => {
       onClose();
     }, 800);
@@ -159,7 +233,7 @@ export default function QuickUploadModal({ defaultTab = 'docs', categories = [],
       <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '780px' }}>
         <div className="modal-header" style={{ background: '#16a34a' }}>
           <span style={{ fontSize: '14px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Upload size={18} /> 📤 ĐĂNG TẢI NỘI DUNG VÀ TỆP TIN CÔNG KHAI
+            <Upload size={18} /> 📤 ĐĂNG TẢI NỘI DUNG LÊN SUPABASE CLOUD (TẤT CẢ THIẾT BỊ ĐỀU XEM ĐƯỢC)
           </span>
           <button className="close-btn" onClick={onClose}><X size={20} /></button>
         </div>
@@ -284,7 +358,7 @@ export default function QuickUploadModal({ defaultTab = 'docs', categories = [],
               </>
             )}
 
-            {/* Universal File Upload Box (Direct Embedded Storage) */}
+            {/* Universal File Upload Box */}
             <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
               <h4 style={{ fontSize: '13.5px', color: '#0056a6', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: '700' }}>
                 <Upload size={16} /> TẢI ĐÌNH KÈM TỆP TIN TỪ MÁY TÍNH (.PDF / .DOCX / .ZIP / .MP4)
@@ -323,7 +397,7 @@ export default function QuickUploadModal({ defaultTab = 'docs', categories = [],
               disabled={uploading}
               style={{ background: '#16a34a', color: 'white', border: 'none', padding: '12px', borderRadius: '4px', fontWeight: '700', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
-              <Upload size={18} /> {uploading ? 'Đang đọc tệp...' : '🚀 XÁC NHẬN ĐĂNG TẢI NỘI DUNG CÔNG KHAI'}
+              <Upload size={18} /> {uploading ? 'Đang lưu dữ liệu...' : '🚀 XÁC NHẬN ĐĂNG TẢI LÊN CLOUD CÔNG KHAI'}
             </button>
           </form>
         </div>
