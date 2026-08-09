@@ -1,7 +1,7 @@
 import React from 'react';
-import { Home, Info, Newspaper, FileText, Image, Video, BookOpen, Calendar, Mail, ShieldAlert, Upload, UserPlus } from 'lucide-react';
+import { Home, Info, Newspaper, FileText, Image, Video, BookOpen, Calendar, Mail, ShieldAlert, Upload, UserPlus, Layers } from 'lucide-react';
 
-export default function Navbar({ activeTab, setActiveTab, onOpenAdmin, onOpenUpload, onOpenRegister }) {
+export default function Navbar({ activeTab, setActiveTab, onOpenAdmin, onOpenUpload, onOpenBulkUpload, onOpenRegister }) {
   const navs = [
     { id: 'home', label: 'Trang chủ', icon: <Home size={15} /> },
     { id: 'intro', label: 'Giới thiệu', icon: <Info size={15} /> },
@@ -33,10 +33,16 @@ export default function Navbar({ activeTab, setActiveTab, onOpenAdmin, onOpenUpl
         <span>👤 Đăng Ký</span>
       </a>
 
-      {/* Prominent Quick Upload Button */}
+      {/* Prominent Single Quick Upload Button */}
       <a className="nav-item" style={{ background: '#16a34a', fontWeight: '700' }} onClick={onOpenUpload}>
         <Upload size={15} />
-        <span>📤 Tải Nổi Bật</span>
+        <span>📤 Tải Đơn</span>
+      </a>
+
+      {/* NEW Prominent Bulk Upload Button */}
+      <a className="nav-item" style={{ background: '#0284c7', fontWeight: '700' }} onClick={onOpenBulkUpload}>
+        <Layers size={15} />
+        <span>📦 Tải Hàng Loạt</span>
       </a>
 
       {/* Admin Portal Button */}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { BookOpen, Download, Search, ExternalLink, Upload } from 'lucide-react';
+import { BookOpen, Download, ExternalLink, Upload, Layers } from 'lucide-react';
 
-export default function ResourcesView({ resources = [], onOpenUpload }) {
+export default function ResourcesView({ resources = [], onOpenUpload, onOpenBulkUpload }) {
   const [filterType, setFilterType] = useState('Tất cả');
   const [search, setSearch] = useState('');
 
@@ -57,12 +57,21 @@ export default function ResourcesView({ resources = [], onOpenUpload }) {
             <BookOpen size={18} /> KHO TÀI NGUYÊN GIẢNG DẠY & ĐỀ THI - THCS ĐỒNG TÂN
           </span>
 
-          <button 
-            style={{ background: '#16a34a', color: 'white', border: 'none', padding: '5px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}
-            onClick={() => onOpenUpload && onOpenUpload('resources')}
-          >
-            <Upload size={14} /> 📤 ĐĂNG TẢI ĐỀ THI / GIÁO ÁN MỚI
-          </button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button 
+              style={{ background: '#16a34a', color: 'white', border: 'none', padding: '5px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}
+              onClick={() => onOpenUpload && onOpenUpload('resources')}
+            >
+              <Upload size={14} /> 📤 ĐĂNG TẢI 1 ĐỀ THI
+            </button>
+
+            <button 
+              style={{ background: '#0284c7', color: 'white', border: 'none', padding: '5px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '5px' }}
+              onClick={() => onOpenBulkUpload && onOpenBulkUpload()}
+            >
+              <Layers size={14} /> 📦 TẢI LÊN HÀNG LOẠT (BULK UPLOAD)
+            </button>
+          </div>
         </div>
 
         <div className="widget-body" style={{ padding: '20px' }}>

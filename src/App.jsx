@@ -8,6 +8,7 @@ import RightSidebar from './components/RightSidebar';
 import NewsDetailModal from './components/NewsDetailModal';
 import DocumentDetailModal from './components/DocumentDetailModal';
 import QuickUploadModal from './components/QuickUploadModal';
+import BulkUploadModal from './components/BulkUploadModal';
 import RegisterModal from './components/RegisterModal';
 import AdminPortal from './components/AdminPortal';
 import IntroView from './components/IntroView';
@@ -152,8 +153,9 @@ export default function App() {
   const [selectedDocumentId, setSelectedDocumentId] = useState(null);
   const [activeDocument, setActiveDocument] = useState(null);
 
-  // Quick Upload & Register Modal States
+  // Quick Upload, Bulk Upload & Register Modal States
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [uploadDefaultTab, setUploadDefaultTab] = useState('docs');
   const [showRegisterModal, setShowRegisterModal] = useState(false);
 
@@ -305,7 +307,6 @@ export default function App() {
 
   useEffect(() => {
     fetchCloudData();
-    // Auto sync Cloud Postgres every 10 seconds for real-time multi-device access
     const interval = setInterval(fetchCloudData, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -438,6 +439,10 @@ export default function App() {
     setShowUploadModal(true);
   };
 
+  const handleOpenBulkUpload = () => {
+    setShowBulkUploadModal(true);
+  };
+
   const handleSelectArticle = async (id) => {
     const found = newsList.find(n => n.id === id);
     if (found) {
@@ -500,6 +505,7 @@ export default function App() {
         }} 
         onOpenAdmin={() => setActiveTab('admin')} 
         onOpenUpload={() => handleOpenUpload('docs')}
+        onOpenBulkUpload={handleOpenBulkUpload}
         onOpenRegister={() => setShowRegisterModal(true)}
       />
 
@@ -536,7 +542,7 @@ export default function App() {
       ) : activeTab === 'videos' ? (
         <VideosView videos={videos} onOpenUpload={handleOpenUpload} />
       ) : activeTab === 'resources' ? (
-        <ResourcesView resources={resources} onOpenUpload={handleOpenUpload} />
+        <ResourcesView resources={resources} onOpenUpload={handleOpenUpload} onOpenBulkUpload={handleOpenBulkUpload} />
       ) : activeTab === 'schedule' ? (
         <ScheduleView schedule={schedules} />
       ) : activeTab === 'contact' ? (
@@ -547,12 +553,20 @@ export default function App() {
             <div className="widget-header orange" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>📄 TRA CỨU VĂN BẢN CHỈ ĐẠO & QUY CHẾ THCS ĐỒNG TÂN</span>
 
-              <button 
-                style={{ background: '#16a34a', color: 'white', border: 'none', padding: '5px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '12px' }}
-                onClick={() => handleOpenUpload('docs')}
-              >
-                📤 TẢI VĂN BẢN MỚI LÊN
-              </button>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  style={{ background: '#16a34a', color: 'white', border: 'none', padding: '5px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '12px' }}
+                  onClick={() => handleOpenUpload('docs')}
+                >
+                  📤 TẢI VĂN BẢN MỚI LÊN
+                </button>
+                <button 
+                  style={{ background: '#0284c7', color: 'white', border: 'none', padding: '5px 12px', borderRadius: '4px', cursor: 'pointer', fontWeight: '700', fontSize: '12px' }}
+                  onClick={handleOpenBulkUpload}
+                >
+                  📦 TẢI LÊN HÀNG LOẠT
+                </button>
+              </div>
             </div>
             <div className="widget-body">
               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
@@ -637,6 +651,17 @@ export default function App() {
           categories={categories} 
           onClose={() => setShowUploadModal(false)}
           onAddNewItem={handleAddNewItem}
+        />
+      )}
+
+      {/* NEW Bulk Upload Popup Modal */}
+      {showBulkUploadModal && (
+        <BulkUploadModal 
+          onClose={() => setShowBulkUploadModal(false)}
+          onBulkUploadSuccess={() => {
+            fetchCloudData();
+            setShowBulkUploadModal(false);
+          }}
         />
       )}
 
