@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, LogOut, PlusCircle, FilePlus, Video, Bell, Image, BookOpen, Upload, UserPlus, Users, Check, Trash2, Edit, Settings, AlertCircle, Save } from 'lucide-react';
+import { ShieldCheck, LogOut, PlusCircle, FilePlus, Users, CheckCircle, Trash2, Edit, Settings, AlertCircle, Save, Check, UserCheck, Bell, UserPlus } from 'lucide-react';
 
 export default function AdminPortal({ 
   token, 
@@ -12,6 +12,9 @@ export default function AdminPortal({
   newsList = [],
   documents = [],
   resources = [],
+  pendingUsers = [],
+  onApproveUser,
+  onRejectUser,
   onUpdateNews,
   onDeleteNews,
   onUpdateDocument,
@@ -23,7 +26,7 @@ export default function AdminPortal({
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin123');
   const [loginError, setLoginError] = useState('');
-  const [adminTab, setAdminTab] = useState('config');
+  const [adminTab, setAdminTab] = useState('users');
   const [message, setMessage] = useState('');
   const [uploading, setUploading] = useState(false);
 
@@ -35,27 +38,36 @@ export default function AdminPortal({
     address: siteConfig.address || 'Xã Hữu Lũng - Tỉnh Lạng Sơn',
     phone: siteConfig.phone || '(0205) 3885.6789',
     email: siteConfig.email || 'thcsdongtan.huulung@langson.edu.vn',
-    logoUrl: siteConfig.logoUrl || 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=300&q=80',
-    bannerBg: siteConfig.bannerBg || ''
+    logoUrl: siteConfig.logoUrl || '/images/school-logo.jpg',
+    bannerBg: siteConfig.bannerBg || '/images/school-banner.png'
   });
 
   // User Management State
-  const [userList, setUserList] = useState([
-    { id: 1, username: 'admin', fullName: 'Thầy Hiệu Trưởng - THCS Đồng Tân', role: 'BGH', email: 'bgh.thcsdongtan@langson.edu.vn', status: 'ACTIVE' },
-    { id: 2, username: 'giaovien', fullName: 'Cô Nguyễn Thị Hoa - Giáo Viên Văn', role: 'GIAO_VIEN', email: 'hoanguyen@thcsdongtan.edu.vn', status: 'ACTIVE' }
-  ]);
+  const [userList, setUserList] = useState(() => {
+    const saved = localStorage.getItem('portal_users');
+    return saved ? JSON.parse(saved) : [
+      { id: 1, username: 'admin', fullName: 'Thầy Hiệu Trưởng - THCS Đồng Tân', role: 'BGH', email: 'bgh.thcsdongtan@langson.edu.vn', status: 'ACTIVE', createdAt: '08/08/2026' },
+      { id: 2, username: 'giaovien', fullName: 'Cô Nguyễn Thị Hoa - Giáo Viên Văn', role: 'GIAO_VIEN', email: 'hoanguyen@thcsdongtan.edu.vn', status: 'ACTIVE', createdAt: '08/08/2026' }
+    ];
+  });
 
-  // Editing State
-  const [editingArticle, setEditingArticle] = useState(null);
-  const [editingDoc, setEditingDoc] = useState(null);
-  const [editingResource, setEditingResource] = useState(null);
+  const [pendingList, setPendingList] = useState(() => {
+    const saved = localStorage.getItem('portal_pending_users');
+    return saved ? JSON.parse(saved) : (pendingUsers.length > 0 ? pendingUsers : [
+      { id: 101, username: 'hocsinh01', fullName: 'Em Nguyễn Văn An', role: 'HOC_SINH', email: 'an.nguyen@thcsdongtan.edu.vn', status: 'PENDING', createdAt: '09/08/2026' }
+    ]);
+  });
 
-  // User Form State
+  // Form states for creating new user directly
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newFullName, setNewFullName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState('GIAO_VIEN');
+
+  // Editing State
+  const [editingArticle, setEditingArticle] = useState(null);
+  const [editingDoc, setEditingDoc] = useState(null);
 
   // News Form State
   const [newsTitle, setNewsTitle] = useState('');
@@ -75,19 +87,17 @@ export default function AdminPortal({
   const [docFileUrl, setDocFileUrl] = useState('');
   const [docExternalLink, setDocExternalLink] = useState('');
 
-  // Resource Form State
-  const [resTitle, setResTitle] = useState('');
-  const [resSubject, setResSubject] = useState('Toán 9');
-  const [resType, setResType] = useState('Đề thi & Đáp án');
-  const [resFileUrl, setResFileUrl] = useState('');
-  const [resExternalLink, setResExternalLink] = useState('');
-
   const fetchUsers = async () => {
     try {
       const res = await fetch('/api/auth/users');
       if (res.ok) {
         const data = await res.json();
-        if (data.success && data.data.length > 0) setUserList(data.data);
+        if (data.success && data.data.length > 0) {
+          const actives = data.data.filter(u => u.status === 'ACTIVE');
+          const pendings = data.data.filter(u => u.status === 'PENDING');
+          if (actives.length > 0) setUserList(actives);
+          if (pendings.length > 0) setPendingList(pendings);
+        }
       }
     } catch (err) {}
   };
@@ -96,31 +106,87 @@ export default function AdminPortal({
     if (token) fetchUsers();
   }, [token]);
 
+  // Sync users to LocalStorage
+  useEffect(() => {
+    localStorage.setItem('portal_users', JSON.stringify(userList));
+  }, [userList]);
+
+  useEffect(() => {
+    localStorage.setItem('portal_pending_users', JSON.stringify(pendingList));
+  }, [pendingList]);
+
+  // Handle Approve User
+  const handleApproveUserClick = async (pendingUser) => {
+    try {
+      await fetch(`/api/auth/approve-user/${pendingUser.id}`, { method: 'POST' });
+    } catch (err) {}
+
+    const approved = { ...pendingUser, status: 'ACTIVE' };
+    setUserList(prev => [approved, ...prev]);
+    setPendingList(prev => prev.filter(u => u.id !== pendingUser.id));
+
+    if (onApproveUser) onApproveUser(pendingUser.id);
+    setMessage(`✅ Đã phê duyệt và kích hoạt tài khoản thành công cho: ${pendingUser.fullName} (${pendingUser.username})`);
+  };
+
+  // Handle Reject / Delete User
+  const handleRejectUserClick = async (userId) => {
+    try {
+      await fetch(`/api/auth/users/${userId}`, { method: 'DELETE' });
+    } catch (err) {}
+
+    setPendingList(prev => prev.filter(u => u.id !== userId));
+    setUserList(prev => prev.filter(u => u.id !== userId));
+
+    if (onRejectUser) onRejectUser(userId);
+    setMessage('✅ Đã từ chối / xóa đăng ký tài khoản thành viên');
+  };
+
+  // Handle Direct Account Creation by Admin
+  const handleCreateUserSubmit = async (e) => {
+    e.preventDefault();
+    if (!newUsername || !newPassword || !newFullName) {
+      setMessage('⚠️ Vui lòng điền đầy đủ Tên tài khoản, Mật khẩu và Họ tên!');
+      return;
+    }
+
+    const newUser = {
+      id: Date.now(),
+      username: newUsername.trim(),
+      fullName: newFullName.trim(),
+      role: newRole,
+      email: newEmail.trim() || `${newUsername}@thcsdongtan.edu.vn`,
+      status: 'ACTIVE',
+      createdAt: new Date().toLocaleDateString('vi-VN')
+    };
+
+    try {
+      await fetch('/api/auth/create-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: newUsername, password: newPassword, fullName: newFullName, email: newEmail, role: newRole })
+      });
+    } catch (err) {}
+
+    setUserList(prev => [newUser, ...prev]);
+    setMessage(`🎉 Đã tạo và kích hoạt tài khoản thành công cho ${newFullName} (${newRole})!`);
+
+    setNewUsername('');
+    setNewPassword('');
+    setNewFullName('');
+    setNewEmail('');
+  };
+
   const handleFileUpload = async (file, setUrlCallback) => {
     if (!file) return;
     setUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const res = await fetch('/api/upload', {
-        method: 'POST',
-        body: formData
-      });
-      const data = await res.json();
-      if (data.success) {
-        setUrlCallback(data.fileUrl);
-        setMessage(`✅ Đã tải tệp lên máy chủ: ${data.fileName} (${data.fileSize})`);
-      } else {
-        setMessage('❌ ' + data.message);
-      }
-    } catch (err) {
-      const fakeUrl = URL.createObjectURL(file);
-      setUrlCallback(fakeUrl);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setUrlCallback(e.target.result);
       setMessage(`✅ Đã đính kèm tệp tin: ${file.name}`);
-    } finally {
       setUploading(false);
-    }
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSaveConfig = (e) => {
@@ -310,36 +376,42 @@ export default function AdminPortal({
       </div>
 
       {message && (
-        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', padding: '10px 15px', borderRadius: '4px', marginBottom: '20px', fontWeight: '600' }}>
-          {message}
+        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', padding: '10px 15px', borderRadius: '4px', marginBottom: '20px', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <CheckCircle size={18} /> {message}
         </div>
       )}
 
       {/* Navigation Tabs in Admin */}
       <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #e2e8f0', marginBottom: '20px', overflowX: 'auto', paddingBottom: '4px' }}>
         <button 
+          onClick={() => setAdminTab('users')} 
+          style={{ padding: '8px 14px', border: 'none', borderBottom: adminTab === 'users' ? '3px solid #0056a6' : 'none', background: pendingList.length > 0 ? '#fef2f2' : 'transparent', fontWeight: adminTab === 'users' ? '700' : '500', color: adminTab === 'users' ? '#0056a6' : '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap', borderRadius: '4px' }}
+        >
+          <Users size={15} /> 👥 Quản Lý & Cấp Tài Khoản
+          {pendingList.length > 0 && (
+            <span style={{ background: '#ef4444', color: 'white', fontSize: '11px', fontWeight: '800', padding: '2px 7px', borderRadius: '10px', animation: 'pulse 1.5s infinite' }}>
+              {pendingList.length} CHỜ DUYỆT
+            </span>
+          )}
+        </button>
+
+        <button 
           onClick={() => setAdminTab('config')} 
           style={{ padding: '8px 14px', border: 'none', borderBottom: adminTab === 'config' ? '3px solid #0056a6' : 'none', background: 'transparent', fontWeight: adminTab === 'config' ? '700' : '500', color: adminTab === 'config' ? '#0056a6' : '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
         >
-          <Settings size={15} /> ⚙️ Sửa Thông Tin & Banner Trường
+          <Settings size={15} /> ⚙️ Sửa Thông Tin & Banner
         </button>
         <button 
           onClick={() => setAdminTab('manageNews')} 
           style={{ padding: '8px 14px', border: 'none', borderBottom: adminTab === 'manageNews' ? '3px solid #0056a6' : 'none', background: 'transparent', fontWeight: adminTab === 'manageNews' ? '700' : '500', color: adminTab === 'manageNews' ? '#0056a6' : '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
         >
-          <Edit size={15} /> 📰 Quản Lý / Sửa Tin Bài ({newsList.length})
+          <Edit size={15} /> 📰 Bài Viết ({newsList.length})
         </button>
         <button 
           onClick={() => setAdminTab('manageDocs')} 
           style={{ padding: '8px 14px', border: 'none', borderBottom: adminTab === 'manageDocs' ? '3px solid #0056a6' : 'none', background: 'transparent', fontWeight: adminTab === 'manageDocs' ? '700' : '500', color: adminTab === 'manageDocs' ? '#0056a6' : '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
         >
-          <FilePlus size={15} /> 📄 Quản Lý / Sửa Văn Bản ({documents.length})
-        </button>
-        <button 
-          onClick={() => setAdminTab('users')} 
-          style={{ padding: '8px 14px', border: 'none', borderBottom: adminTab === 'users' ? '3px solid #0056a6' : 'none', background: 'transparent', fontWeight: adminTab === 'users' ? '700' : '500', color: adminTab === 'users' ? '#0056a6' : '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
-        >
-          <Users size={15} /> 👥 Quản Lý & Cấp Tài Khoản
+          <FilePlus size={15} /> 📄 Văn Bản ({documents.length})
         </button>
         <button 
           onClick={() => { setEditingArticle(null); setAdminTab('news'); }} 
@@ -347,13 +419,163 @@ export default function AdminPortal({
         >
           <PlusCircle size={15} /> ➕ Đăng Tin Mới
         </button>
-        <button 
-          onClick={() => { setEditingDoc(null); setAdminTab('docs'); }} 
-          style={{ padding: '8px 14px', border: 'none', borderBottom: adminTab === 'docs' ? '3px solid #0056a6' : 'none', background: 'transparent', fontWeight: adminTab === 'docs' ? '700' : '500', color: adminTab === 'docs' ? '#0056a6' : '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
-        >
-          <FilePlus size={15} /> ➕ Thêm Văn Bản
-        </button>
       </div>
+
+      {/* TAB 1: QUẢN LÝ TÀI KHOẢN, PHÊ DUYỆT ĐĂNG KÝ VÀ CẤP THÀNH VIÊN */}
+      {adminTab === 'users' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+          
+          {/* SECTION A: PENDING MEMBER REGISTRATIONS (ĐƠN CHỜ BAN GIÁM HIỆU DUYỆT) */}
+          <div style={{ background: pendingList.length > 0 ? '#fff7ed' : '#f8fafc', border: pendingList.length > 0 ? '2px solid #fdba74' : '1px solid #cbd5e1', padding: '18px', borderRadius: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
+              <h3 style={{ fontSize: '16px', color: pendingList.length > 0 ? '#c2410c' : '#003a73', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Bell size={20} color={pendingList.length > 0 ? '#c2410c' : '#0056a6'} /> ⏳ DANH SÁCH ĐƠN ĐĂNG KÝ THÀNH VIÊN MỚI CHỜ PHÊ DUYỆT ({pendingList.length})
+              </h3>
+              {pendingList.length > 0 && (
+                <span style={{ background: '#ef4444', color: 'white', padding: '4px 10px', borderRadius: '12px', fontWeight: '700', fontSize: '12px' }}>
+                  Yêu cầu mới
+                </span>
+              )}
+            </div>
+
+            {pendingList.length === 0 ? (
+              <div style={{ textAlign: 'center', color: '#166534', padding: '15px', background: '#f0fdf4', borderRadius: '6px', fontWeight: '600', fontSize: '13px' }}>
+                ✓ Hiện không có đơn đăng ký thành viên nào đang chờ duyệt. Tất cả đã được phê duyệt!
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {pendingList.map((pUser) => (
+                  <div key={pUser.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'white', padding: '12px 15px', borderRadius: '6px', border: '1px solid #fed7aa', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                        <span style={{ fontSize: '14.5px', fontWeight: '800', color: '#003a73' }}>{pUser.fullName}</span>
+                        <span style={{ fontSize: '11.5px', background: '#3b82f6', color: 'white', padding: '2px 8px', borderRadius: '4px', fontWeight: '700' }}>
+                          {pUser.role === 'HOC_SINH' ? '🎓 Học Sinh' : (pUser.role === 'PHU_HUYNH' ? '👨‍👩‍👧 Phụ Huynh' : '👨‍🏫 Giáo Viên')}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '12.5px', color: '#475569' }}>
+                        👤 Tên tài khoản: <strong>{pUser.username}</strong> | ✉️ Email: {pUser.email || 'Chưa cập nhật'} | 📅 Ngày đăng ký: {pUser.createdAt || 'Gần đây'}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        onClick={() => handleApproveUserClick(pUser)}
+                        style={{ background: '#16a34a', color: 'white', border: 'none', padding: '8px 14px', borderRadius: '4px', fontWeight: '700', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        <Check size={16} /> ✅ PHÊ DUYỆT & CẤP QUYỀN
+                      </button>
+                      <button 
+                        onClick={() => handleRejectUserClick(pUser.id)}
+                        style={{ background: '#ef4444', color: 'white', border: 'none', padding: '8px 12px', borderRadius: '4px', fontWeight: '700', fontSize: '13px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                      >
+                        <Trash2 size={16} /> ❌ TỪ CHỐI
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* SECTION B: FORM CẤP TÀI KHOẢN TRỰC TIẾP CHO CÁN BỘ / GIÁO VIÊN */}
+          <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+            <h3 style={{ fontSize: '16px', color: '#003a73', fontWeight: '800', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <UserPlus size={20} color="#0056a6" /> ➕ CẤP TÀI KHOẢN MỚI TRỰC TIẾP CHO GIÁO VIÊN / HỌC SINH
+            </h3>
+
+            <form onSubmit={handleCreateUserSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>Họ và tên thành viên:</label>
+                <input type="text" value={newFullName} onChange={(e) => setNewFullName(e.target.value)} required style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }} placeholder="VD: Thầy Vũ Văn Minh" />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>Tên tài khoản đăng nhập:</label>
+                <input type="text" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} required style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }} placeholder="VD: vuminh_math" />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>Mật khẩu khởi tạo:</label>
+                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }} placeholder="Nhập mật khẩu..." />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>Chức vụ & Quyền hạn:</label>
+                <select value={newRole} onChange={(e) => setNewRole(e.target.value)} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+                  <option value="GIAO_VIEN">👨‍🏫 Giáo Viên (Biên tập bài viết/giáo án)</option>
+                  <option value="BGH">🏛️ Ban Giám Hiệu (Toàn quyền quản trị)</option>
+                  <option value="HOC_SINH">🎓 Học Sinh</option>
+                  <option value="PHU_HUYNH">👨‍👩‍👧 Phụ Huynh</option>
+                </select>
+              </div>
+
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>Email liên hệ:</label>
+                <input type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }} placeholder="vuminh@thcsdongtan.edu.vn" />
+              </div>
+
+              <button type="submit" style={{ gridColumn: 'span 2', background: '#0056a6', color: 'white', border: 'none', padding: '10px', borderRadius: '4px', fontWeight: '700', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                <UserCheck size={18} /> 🚀 XÁC NHẬN CẤP TÀI KHOẢN VÀ KÍCH HOẠT NGAY
+              </button>
+            </form>
+          </div>
+
+          {/* SECTION C: ACTIVE USERS TABLE (DANH SÁCH TÀI KHOẢN ĐÃ KÍCH HOẠT) */}
+          <div>
+            <h3 style={{ fontSize: '16px', color: '#003a73', fontWeight: '800', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Users size={20} color="#0056a6" /> 👥 DANH SÁCH TÀI KHOẢN ĐÃ KÍCH HOẠT TRÊN HỆ THỐNG ({userList.length})
+            </h3>
+
+            <div style={{ border: '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ background: '#0056a6', color: 'white' }}>
+                    <th style={{ padding: '10px 12px' }}>STT</th>
+                    <th style={{ padding: '10px 12px' }}>Tên Tài Khoản</th>
+                    <th style={{ padding: '10px 12px' }}>Họ Và Tên</th>
+                    <th style={{ padding: '10px 12px' }}>Vai Trò</th>
+                    <th style={{ padding: '10px 12px' }}>Email</th>
+                    <th style={{ padding: '10px 12px' }}>Trạng Thái</th>
+                    <th style={{ padding: '10px 12px', textAlign: 'center' }}>Thao Tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {userList.map((u, idx) => (
+                    <tr key={u.id} style={{ borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? 'white' : '#f8fafc' }}>
+                      <td style={{ padding: '10px 12px', fontWeight: '700' }}>{idx + 1}</td>
+                      <td style={{ padding: '10px 12px', fontWeight: '700', color: '#0056a6' }}>{u.username}</td>
+                      <td style={{ padding: '10px 12px', fontWeight: '600' }}>{u.fullName}</td>
+                      <td style={{ padding: '10px 12px' }}>
+                        <span style={{ fontSize: '11.5px', background: u.role === 'BGH' ? '#d97706' : (u.role === 'GIAO_VIEN' ? '#0284c7' : '#16a34a'), color: 'white', padding: '3px 8px', borderRadius: '4px', fontWeight: '700' }}>
+                          {u.role === 'BGH' ? '🏛️ Ban Giám Hiệu' : (u.role === 'GIAO_VIEN' ? '👨‍🏫 Giáo Viên' : '🎓 Học Sinh / Phụ Huynh')}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 12px', color: '#64748b' }}>{u.email || 'N/A'}</td>
+                      <td style={{ padding: '10px 12px' }}>
+                        <span style={{ fontSize: '11.5px', background: '#dcfce7', color: '#15803d', padding: '3px 8px', borderRadius: '4px', fontWeight: '700', border: '1px solid #86efac' }}>
+                          ✓ ĐÃ KÍCH HOẠT
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                        {u.username !== 'admin' && (
+                          <button 
+                            onClick={() => handleRejectUserClick(u.id)}
+                            style={{ background: '#ef4444', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}
+                          >
+                            Xóa
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+      )}
 
       {/* Tab Config: Sửa Cấu Hình Banner & Thông tin trường */}
       {adminTab === 'config' && (
@@ -396,7 +618,7 @@ export default function AdminPortal({
           </div>
 
           {/* Logo & Banner Upload Box */}
-          <div style={{ background: '#white', padding: '15px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+          <div style={{ background: 'white', padding: '15px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
             <h4 style={{ fontSize: '13px', color: '#0056a6', marginBottom: '10px', fontWeight: '700' }}>
               🖼️ ĐỔI LOGO VÀ ẢNH BANNER HEADER
             </h4>
@@ -490,7 +712,7 @@ export default function AdminPortal({
         </div>
       )}
 
-      {/* Tab 1: Form Đăng & Sửa Tin Bài */}
+      {/* Tab Form Đăng & Sửa Tin Bài */}
       {adminTab === 'news' && (
         <form onSubmit={handleCreateNews} style={{ display: 'grid', gap: '15px', maxWidth: '750px' }}>
           <h3 style={{ fontSize: '16px', color: '#003a73', fontWeight: '700' }}>
@@ -513,25 +735,8 @@ export default function AdminPortal({
             </div>
           </div>
           
-          <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
-            <h4 style={{ fontSize: '13px', color: '#0056a6', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Upload size={16} /> TẢI TỆP ĐÌNH KÈM TỪ MÁY TÍNH HOẶC CẶP LINK OUT
-            </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Chọn tệp từ máy tính:</label>
-                <input type="file" onChange={(e) => handleFileUpload(e.target.files[0], setNewsFileUrl)} style={{ fontSize: '12px' }} />
-                {newsFileUrl && <div style={{ fontSize: '11.5px', color: '#16a34a', marginTop: '4px' }}>✓ Tệp: {newsFileUrl}</div>}
-              </div>
-              <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', marginBottom: '4px' }}>Đường link ngoài (Drive):</label>
-                <input type="text" value={newsExternalLink} onChange={(e) => setNewsExternalLink(e.target.value)} style={{ width: '100%', padding: '6px', border: '1px solid #cbd5e1', borderRadius: '4px', fontSize: '12px' }} placeholder="https://..." />
-              </div>
-            </div>
-          </div>
-
           <div>
-            <label style={{ display: 'block', fontWeight: '600', marginBottom: '4px' }}>Tóm tắt ngắn (Dưới 30 từ):</label>
+            <label style={{ display: 'block', fontWeight: '600', marginBottom: '4px' }}>Tóm tắt ngắn:</label>
             <textarea value={newsSummary} onChange={(e) => setNewsSummary(e.target.value)} rows={2} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }} placeholder="Tóm tắt bài viết..."></textarea>
           </div>
           <div>
@@ -544,7 +749,7 @@ export default function AdminPortal({
         </form>
       )}
 
-      {/* Tab 2: Form Đăng & Sửa Văn Bản */}
+      {/* Tab Form Đăng & Sửa Văn Bản */}
       {adminTab === 'docs' && (
         <form onSubmit={handleCreateDocument} style={{ display: 'grid', gap: '15px', maxWidth: '750px' }}>
           <h3 style={{ fontSize: '16px', color: '#003a73', fontWeight: '700' }}>

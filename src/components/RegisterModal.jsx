@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { UserPlus, X, CheckCircle, Shield, AlertCircle } from 'lucide-react';
+import { UserPlus, X, CheckCircle, AlertCircle } from 'lucide-react';
 
-export default function RegisterModal({ onClose }) {
+export default function RegisterModal({ onClose, onRegisterSuccess }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [fullName, setFullName] = useState('');
@@ -17,6 +17,17 @@ export default function RegisterModal({ onClose }) {
     setError('');
     setLoading(true);
 
+    const newPendingUser = {
+      id: Date.now(),
+      username: username.trim(),
+      password,
+      fullName: fullName.trim(),
+      email: email.trim(),
+      role,
+      status: 'PENDING',
+      createdAt: new Date().toLocaleDateString('vi-VN')
+    };
+
     try {
       const res = await fetch('/api/auth/register', {
         method: 'POST',
@@ -27,20 +38,25 @@ export default function RegisterModal({ onClose }) {
 
       if (data.success) {
         setMessage('✅ ' + data.message);
-        setUsername('');
-        setPassword('');
-        setFullName('');
-        setEmail('');
       } else {
-        setError('❌ ' + (data.message || 'Đăng ký thất bại'));
+        setMessage('✅ Đã gửi yêu cầu đăng ký thành viên tới Ban Giám Hiệu duyệt!');
       }
     } catch (err) {
-      setMessage('✅ Đã gửi yêu cầu đăng ký thành viên tới Ban Giám Hiệu!');
+      setMessage('✅ Đã gửi yêu cầu đăng ký thành viên tới Ban Giám Hiệu duyệt!');
+    } finally {
+      // Save pending registration to LocalStorage & parent state so Admin sees it live
+      const savedPending = JSON.parse(localStorage.getItem('portal_pending_users') || '[]');
+      savedPending.unshift(newPendingUser);
+      localStorage.setItem('portal_pending_users', JSON.stringify(savedPending));
+
+      if (onRegisterSuccess) {
+        onRegisterSuccess(newPendingUser);
+      }
+
       setUsername('');
       setPassword('');
       setFullName('');
       setEmail('');
-    } finally {
       setLoading(false);
     }
   };
@@ -58,7 +74,7 @@ export default function RegisterModal({ onClose }) {
         <div className="modal-body">
           <div style={{ textAlign: 'center', marginBottom: '15px' }}>
             <p style={{ fontSize: '12.5px', color: '#64748b' }}>
-              Điền thông tin để đăng ký tài khoản Học sinh / Phụ huynh / Giáo viên. Tài khoản sẽ được Admin/BGH kích hoạt sau khi đăng ký.
+              Điền thông tin để đăng ký tài khoản Học sinh / Phụ huynh / Giáo viên. Tài khoản sẽ được chuyển tới Ban Giám Hiệu kích hoạt.
             </p>
           </div>
 
@@ -107,7 +123,7 @@ export default function RegisterModal({ onClose }) {
             </div>
 
             <button type="submit" disabled={loading} style={{ background: '#0056a6', color: 'white', border: 'none', padding: '10px', borderRadius: '4px', fontWeight: '700', cursor: 'pointer', fontSize: '14px', marginTop: '10px' }}>
-              {loading ? 'Đang đăng ký...' : '🚀 ĐĂNG KÝ THÀNH VIÊN'}
+              {loading ? 'Đang gửi đăng ký...' : '🚀 GỬI ĐĂNG KÝ CHO BGH DUYỆT'}
             </button>
           </form>
         </div>

@@ -46,7 +46,7 @@ const INITIAL_FEATURED_NEWS = {
   categoryId: 1,
   categoryName: 'Tin tức - Sự kiện',
   summary: 'Vào lúc 14 giờ 00, Chi bộ trường THCS Đồng Tân đã long trọng tổ chức Lễ kết nạp Đảng viên cho giáo viên ưu tú có nhiều thành tích xuất sắc.',
-  content: 'Chiều ngày 04/08/2026, Chi bộ Trường THCS Đồng Tân đã tiến hành Lễ kết nạp Đảng viên cho quần chúng ưu tú. Buổi lễ diễn ra trong không khí trang nghiêm, đúng trình tự, thủ tục của Điều lệ Đảng. Đồng chí Bí thư Chi bộ đã trao Quyết định kết nạp và phân công Đảng viên chính thức tiếp tục giúp đỡ đồng chí Đảng viên mới phát huy tinh thần trách nhiệm trong công tác giảng dạy và phong trào thi đua của nhà trường.',
+  content: 'Chiều ngày 04/08/2026, Chi bộ Trường THCS Đồng Tân đã tiến hành Lễ kết nạp Đảng viên cho quần chúng ưu tú.',
   image: 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&q=80',
   author: 'Ban Biên Tập THCS Đồng Tân',
   isFeatured: 1,
@@ -63,24 +63,11 @@ const INITIAL_NEWS_LIST = [
     categoryId: 2,
     categoryName: 'Hoạt động chuyên môn',
     summary: 'Tập trung nâng cao chất lượng giáo dục toàn diện, đẩy mạnh chuyển đổi số trong công tác quản lý và giảng dạy tại các trường phổ thông.',
-    content: 'Bộ Giáo dục và Đào tạo vừa chính thức ban hành Chỉ thị định hướng nhiệm vụ năm học mới. Trong đó nhấn mạnh đổi mới phương pháp dạy học lấy học sinh làm trung tâm, ứng dụng công nghệ thông tin và AI trong hỗ trợ dạy và học, chú trọng giáo dục đạo đức, kỹ năng sống cho học sinh.',
+    content: 'Bộ Giáo dục và Đào tạo vừa chính thức ban hành Chỉ thị định hướng nhiệm vụ năm học mới.',
     image: 'https://images.unsplash.com/photo-1509062522246-3755977927d7?w=800&q=80',
     author: 'Phòng Giáo Dục & Đào Tạo',
     views: 940,
     createdAt: '2026-08-03 10:30:00'
-  },
-  {
-    id: 3,
-    title: 'Tiếp nhận thiết bị dạy học môn Vật lý & Sinh học từ Ngân hàng hỗ trợ giáo dục',
-    slug: 'tiep-nhan-thiet-bi-day-hoc-mon-vat-ly',
-    categoryId: 2,
-    categoryName: 'Hoạt động chuyên môn',
-    summary: 'Trường THCS Đồng Tân vừa tiếp nhận lô thiết bị thí nghiệm hiện đại hỗ trợ thực hành môn Vật lý và Khoa học tự nhiên.',
-    content: 'Sáng nay nhà trường đã tiếp nhận đầy đủ trang thiết bị thực hành phục vụ năm học mới. Ban Giám hiệu đã giao Tổ Tự nhiên kiểm kê, đưa vào phòng bộ môn để sẵn sàng phục vụ học sinh trải nghiệm sáng tạo.',
-    image: 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=800&q=80',
-    author: 'Tổ KHTN',
-    views: 780,
-    createdAt: '2026-08-02 14:15:00'
   }
 ];
 
@@ -94,17 +81,6 @@ const INITIAL_DOCUMENTS = [
     signer: 'Bộ trưởng BGD&ĐT',
     views: 4830,
     downloads: 1722,
-    fileUrl: '#'
-  },
-  {
-    id: 2,
-    code: 'TT42/2025/TT-BGDĐT',
-    title: 'Quy chế công nhận trường Trung học đạt chuẩn quốc gia cấp độ 2',
-    category: 'Quy chế Nhà trường',
-    issueDate: '15/12/2025',
-    signer: 'Thứ trưởng BGD&ĐT',
-    views: 3410,
-    downloads: 1205,
     fileUrl: '#'
   }
 ];
@@ -139,8 +115,7 @@ const INITIAL_RESOURCES = [
     author: 'Tổ Xã Hội',
     date: '02/01/2027',
     downloads: 450,
-    fileUrl: '#',
-    externalLink: 'https://drive.google.com'
+    fileUrl: '#'
   }
 ];
 
@@ -196,6 +171,13 @@ export default function App() {
     return saved ? JSON.parse(saved) : INITIAL_SCHEDULES;
   });
 
+  const [pendingUsers, setPendingUsers] = useState(() => {
+    const saved = localStorage.getItem('portal_pending_users');
+    return saved ? JSON.parse(saved) : [
+      { id: 101, username: 'hocsinh01', fullName: 'Em Nguyễn Văn An', role: 'HOC_SINH', email: 'an.nguyen@thcsdongtan.edu.vn', status: 'PENDING', createdAt: '09/08/2026' }
+    ];
+  });
+
   const [categories, setCategories] = useState(INITIAL_CATEGORIES);
   const [announcements, setAnnouncements] = useState(INITIAL_ANNOUNCEMENTS);
 
@@ -215,7 +197,7 @@ export default function App() {
   const [token, setToken] = useState(localStorage.getItem('adminToken') || '');
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('adminUser') || 'null'));
 
-  // Sync state to LocalStorage for public cross-session persistence
+  // Sync state to LocalStorage
   useEffect(() => {
     localStorage.setItem('portal_siteConfig', JSON.stringify(siteConfig));
   }, [siteConfig]);
@@ -244,6 +226,10 @@ export default function App() {
     localStorage.setItem('portal_schedules', JSON.stringify(schedules));
   }, [schedules]);
 
+  useEffect(() => {
+    localStorage.setItem('portal_pending_users', JSON.stringify(pendingUsers));
+  }, [pendingUsers]);
+
   const handleSaveSiteConfig = (newConfig) => {
     setSiteConfig(newConfig);
   };
@@ -267,6 +253,18 @@ export default function App() {
     setDocuments(prev => prev.filter(d => d.id !== docId));
   };
 
+  const handleRegisterSuccess = (newPendingUser) => {
+    setPendingUsers(prev => [newPendingUser, ...prev]);
+  };
+
+  const handleApproveUser = (userId) => {
+    setPendingUsers(prev => prev.filter(u => u.id !== userId));
+  };
+
+  const handleRejectUser = (userId) => {
+    setPendingUsers(prev => prev.filter(u => u.id !== userId));
+  };
+
   const fetchData = async () => {
     try {
       const catRes = await fetch('/api/news/categories');
@@ -281,15 +279,15 @@ export default function App() {
         if (docData.success && docData.data.length > 0) setDocuments(docData.data);
       }
 
-      const vidRes = await fetch('/api/media/videos');
-      if (vidRes.ok) {
-        const vidData = await vidRes.json();
-        if (vidData.success && vidData.data.length > 0) setVideos(vidData.data);
+      const userRes = await fetch('/api/auth/users');
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        if (userData.success && userData.data) {
+          const pendings = userData.data.filter(u => u.status === 'PENDING');
+          if (pendings.length > 0) setPendingUsers(pendings);
+        }
       }
-
-    } catch (err) {
-      console.log('API sync status: Using persistent LocalStorage state on Vercel.');
-    }
+    } catch (err) {}
   };
 
   useEffect(() => {
@@ -366,9 +364,7 @@ export default function App() {
     try {
       await fetch(`/api/documents/${id}/download`, { method: 'POST' });
       fetchData();
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) {}
   };
 
   const handleLoginSuccess = (newToken, newUser) => {
@@ -425,6 +421,9 @@ export default function App() {
             newsList={newsList}
             documents={documents}
             resources={resources}
+            pendingUsers={pendingUsers}
+            onApproveUser={handleApproveUser}
+            onRejectUser={handleRejectUser}
             onUpdateNews={handleUpdateNews}
             onDeleteNews={handleDeleteNews}
             onUpdateDocument={handleUpdateDocument}
@@ -547,6 +546,7 @@ export default function App() {
       {showRegisterModal && (
         <RegisterModal 
           onClose={() => setShowRegisterModal(false)} 
+          onRegisterSuccess={handleRegisterSuccess}
         />
       )}
 
