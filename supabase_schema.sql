@@ -1,7 +1,11 @@
 -- =========================================================================
--- KỊCH BẢN KHỞI TẠO CƠ SỞ DỮ LIỆU SUPABASE POSTGRESQL THCS ĐỒNG TÂN (AN TOÀN RE-RUN)
+-- KỊCH BẢN KHOẢNG KHỞI TẠO DỮ LIỆU SUPABASE POSTGRESQL THCS ĐỒNG TÂN (AN TOÀN 100%)
 -- Sao chép toàn bộ mã SQL dưới đây và dán vào Supabase Dashboard: SQL Editor -> Run
 -- =========================================================================
+
+-- -------------------------------------------------------------------------
+-- PHẦN 1: TẠO TẤT CẢ CÁC BẢNG DỮ LIỆU (CREATE TABLES FIRST)
+-- -------------------------------------------------------------------------
 
 -- 1. BẢNG NGƯỜI DÙNG & THÀNH VIÊN (users)
 CREATE TABLE IF NOT EXISTS public.users (
@@ -132,9 +136,9 @@ CREATE TABLE IF NOT EXISTS public.site_config (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- =========================================================================
--- BẬT QUYỀN TRUY CẬP CÔNG KHAI VỚI CƠ CHẾ DROP POLICY IF EXISTS AN TOÀN
--- =========================================================================
+-- -------------------------------------------------------------------------
+-- PHẦN 2: BẬT BẢO MẬT ROW LEVEL SECURITY (KHI BẢNG ĐÃ TỒN TẠI)
+-- -------------------------------------------------------------------------
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
@@ -147,7 +151,10 @@ ALTER TABLE public.schedules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.site_config ENABLE ROW LEVEL SECURITY;
 
--- Xóa Policy cũ nếu đã tồn tại trước khi tạo mới để tránh lỗi policy already exists
+-- -------------------------------------------------------------------------
+-- PHẦN 3: XÓA VÀ TẠO CÁC POLICY PHÂN QUYỀN TRUY CẬP AN TOÀN
+-- -------------------------------------------------------------------------
+
 DROP POLICY IF EXISTS "Public Select Users" ON public.users;
 DROP POLICY IF EXISTS "Public Select Categories" ON public.categories;
 DROP POLICY IF EXISTS "Public Select Articles" ON public.articles;
@@ -172,7 +179,7 @@ DROP POLICY IF EXISTS "Public Select All" ON public.articles;
 DROP POLICY IF EXISTS "Public Select Docs" ON public.documents;
 DROP POLICY IF EXISTS "Public Select Config" ON public.site_config;
 
--- Tạo các Policy phân quyền đọc/ghi công khai
+-- Tạo các Policy mới
 CREATE POLICY "Public Select Users" ON public.users FOR SELECT USING (true);
 CREATE POLICY "Public Select Categories" ON public.categories FOR SELECT USING (true);
 CREATE POLICY "Public Select Articles" ON public.articles FOR SELECT USING (true);
@@ -193,11 +200,10 @@ CREATE POLICY "Public All Resources" ON public.resources FOR ALL USING (true);
 CREATE POLICY "Public All Schedules" ON public.schedules FOR ALL USING (true);
 CREATE POLICY "Public All SiteConfig" ON public.site_config FOR ALL USING (true);
 
--- =========================================================================
--- NẠP DỮ LIỆU MẪU BAN ĐẦU (SEED INITIAL DATA - AN TOÀN ON CONFLICT)
--- =========================================================================
+-- -------------------------------------------------------------------------
+-- PHẦN 4: NẠP DỮ LIỆU MẪU BAN ĐẦU (SEED DATA - AN TOÀN TRÁNH TRÙNG KHÓA)
+-- -------------------------------------------------------------------------
 
--- Seed Categories
 INSERT INTO public.categories (id, name, slug, icon) VALUES
 (1, 'Tin tức - Sự kiện', 'tin-tuc-su-kien', 'Newspaper'),
 (2, 'Hoạt động chuyên môn', 'hoat-dong-chuyen-mon', 'BookOpen'),
@@ -206,29 +212,24 @@ INSERT INTO public.categories (id, name, slug, icon) VALUES
 (5, 'Câu lạc bộ', 'cau-lac-bo', 'Trophy')
 ON CONFLICT (id) DO NOTHING;
 
--- Seed Initial Admin Accounts (Pass: admin123)
 INSERT INTO public.users (id, username, password, full_name, role, email, status) VALUES
 (1, 'admin', '$2a$10$84J.N1i1JvCjJmI/K2D/Me1M.Kx7XG1t3VnS3bK7V9tL.u8.k1u.', 'Thầy Hiệu Trưởng - THCS Đồng Tân', 'BGH', 'bgh.thcsdongtan@langson.edu.vn', 'ACTIVE'),
 (2, 'giaovien', '$2a$10$84J.N1i1JvCjJmI/K2D/Me1M.Kx7XG1t3VnS3bK7V9tL.u8.k1u.', 'Cô Nguyễn Thị Hoa - Giáo Viên Văn', 'GIAO_VIEN', 'hoanguyen@thcsdongtan.edu.vn', 'ACTIVE')
 ON CONFLICT (id) DO NOTHING;
 
--- Seed Initial Site Config
 INSERT INTO public.site_config (id, school_name, governing_body, slogan, address, phone, email, logo_url, banner_bg) VALUES
 (1, 'TRƯỜNG THCS ĐỒNG TÂN', 'ỦY BAN NHÂN DÂN XÃ HỮU LŨNG - TỈNH LẠNG SƠN', 'HỘI TỤ - KẾT TINH - TỎA SÁNG', 'Xã Hữu Lũng - Tỉnh Lạng Sơn', '(0205) 3885.6789', 'thcsdongtan.huulung@langson.edu.vn', '/images/school-logo.jpg', '/images/school-banner.png')
 ON CONFLICT (id) DO NOTHING;
 
--- Seed Initial Featured Article
 INSERT INTO public.articles (id, title, slug, category_id, category_name, summary, content, image, author, is_featured, views) VALUES
-(1, 'Lễ kết nạp Đảng viên mới cho cán bộ giáo viên THCS Đồng Tân', 'le-ket-nap-dang-vien-moi', 1, 'Tin tức - Sự kiện', 'Vào lúc 14 giờ 00, Chi bộ trường THCS Đồng Tân đã long trọng tổ chức Lễ kết nạp Đảng viên cho giáo viên ưu tú có nhiều thành tích xuất sắc.', 'Chiều ngày 04/08/2026, Chi bộ Trường THCS Đồng Tân đã tiến hành Lễ kết nạp Đảng viên cho quần chúng ưu tú. Buổi lễ diễn ra trong không khí trang nghiêm, đúng trình tự, thủ tục của Điều lệ Đảng.', 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&q=80', 'Ban Biên Tập THCS Đồng Tân', 1, 1250)
+(1, 'Lễ kết nạp Đảng viên mới cho cán bộ giáo viên THCS Đồng Tân', 'le-ket-nap-dang-vien-moi', 1, 'Tin tức - Sự kiện', 'Vào lúc 14 giờ 00, Chi bộ trường THCS Đồng Tân đã long trọng tổ chức Lễ kết nạp Đảng viên cho giáo viên ưu tú có nhiều thành tích xuất sắc.', 'Chiều ngày 04/08/2026, Chi bộ Trường THCS Đồng Tân đã tiến hành Lễ kết nạp Đảng viên cho quần chúng ưu tú.', 'https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&q=80', 'Ban Biên Tập THCS Đồng Tân', 1, 1250)
 ON CONFLICT (id) DO NOTHING;
 
--- Seed Initial Documents
 INSERT INTO public.documents (id, code, title, category, issue_date, signer, views, downloads) VALUES
 (1, 'TT07/2026/TT-BGDĐT', 'Thông tư 07/2026/TT-BGDĐT về Phổ cập giáo dục THCS và Xóa mù chữ năm 2026', 'Thông tư BGD&ĐT', '04/08/2026', 'Bộ trưởng BGD&ĐT', 4830, 1722),
 (2, 'TT42/2025/TT-BGDĐT', 'Quy chế công nhận trường Trung học đạt chuẩn quốc gia cấp độ 2', 'Quy chế Nhà trường', '15/12/2025', 'Thứ trưởng BGD&ĐT', 3410, 1205)
 ON CONFLICT (id) DO NOTHING;
 
--- Seed Initial Video
 INSERT INTO public.videos (id, title, youtube_id, thumbnail_url, views) VALUES
 (1, 'Phim tư liệu: 40 năm truyền thống Dạy tốt - Học tốt THCS Đồng Tân', 'k8F4q_N-g_w', 'https://images.unsplash.com/photo-1577896851231-70ef18881754?w=600&q=80', 1540)
 ON CONFLICT (id) DO NOTHING;
