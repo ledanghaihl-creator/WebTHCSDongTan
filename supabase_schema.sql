@@ -1,5 +1,5 @@
 -- =========================================================================
--- KỊCH BẢN KHOẢNG KHỞI TẠO CƠ SỞ DỮ LIỆU SUPABASE POSTGRESQL THCS ĐỒNG TÂN
+-- KỊCH BẢN KHỞI TẠO CƠ SỞ DỮ LIỆU SUPABASE POSTGRESQL THCS ĐỒNG TÂN (AN TOÀN RE-RUN)
 -- Sao chép toàn bộ mã SQL dưới đây và dán vào Supabase Dashboard: SQL Editor -> Run
 -- =========================================================================
 
@@ -9,9 +9,9 @@ CREATE TABLE IF NOT EXISTS public.users (
   username TEXT UNIQUE NOT NULL,
   password TEXT NOT NULL,
   full_name TEXT NOT NULL,
-  role TEXT NOT NULL DEFAULT 'GIAO_VIEN', -- 'BGH', 'GIAO_VIEN', 'HOC_SINH', 'PHU_HUYNH'
+  role TEXT NOT NULL DEFAULT 'GIAO_VIEN',
   email TEXT DEFAULT '',
-  status TEXT NOT NULL DEFAULT 'ACTIVE',  -- 'ACTIVE', 'PENDING'
+  status TEXT NOT NULL DEFAULT 'ACTIVE',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -133,8 +133,7 @@ CREATE TABLE IF NOT EXISTS public.site_config (
 );
 
 -- =========================================================================
--- PHÂN QUYỀN TRUY CẬP CÔNG KHAI (ROW LEVEL SECURITY POLICIES)
--- Mọi người dùng công khai đều có quyền ĐỌC (SELECT) dữ liệu trên Supabase
+-- BẬT QUYỀN TRUY CẬP CÔNG KHAI VỚI CƠ CHẾ DROP POLICY IF EXISTS AN TOÀN
 -- =========================================================================
 
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
@@ -148,7 +147,32 @@ ALTER TABLE public.schedules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.announcements ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.site_config ENABLE ROW LEVEL SECURITY;
 
--- Allow Public Select Policy
+-- Xóa Policy cũ nếu đã tồn tại trước khi tạo mới để tránh lỗi policy already exists
+DROP POLICY IF EXISTS "Public Select Users" ON public.users;
+DROP POLICY IF EXISTS "Public Select Categories" ON public.categories;
+DROP POLICY IF EXISTS "Public Select Articles" ON public.articles;
+DROP POLICY IF EXISTS "Public Select Documents" ON public.documents;
+DROP POLICY IF EXISTS "Public Select Videos" ON public.videos;
+DROP POLICY IF EXISTS "Public Select Albums" ON public.albums;
+DROP POLICY IF EXISTS "Public Select Resources" ON public.resources;
+DROP POLICY IF EXISTS "Public Select Schedules" ON public.schedules;
+DROP POLICY IF EXISTS "Public Select Announcements" ON public.announcements;
+DROP POLICY IF EXISTS "Public Select SiteConfig" ON public.site_config;
+
+DROP POLICY IF EXISTS "Public All Users" ON public.users;
+DROP POLICY IF EXISTS "Public All Articles" ON public.articles;
+DROP POLICY IF EXISTS "Public All Documents" ON public.documents;
+DROP POLICY IF EXISTS "Public All Videos" ON public.videos;
+DROP POLICY IF EXISTS "Public All Albums" ON public.albums;
+DROP POLICY IF EXISTS "Public All Resources" ON public.resources;
+DROP POLICY IF EXISTS "Public All Schedules" ON public.schedules;
+DROP POLICY IF EXISTS "Public All SiteConfig" ON public.site_config;
+
+DROP POLICY IF EXISTS "Public Select All" ON public.articles;
+DROP POLICY IF EXISTS "Public Select Docs" ON public.documents;
+DROP POLICY IF EXISTS "Public Select Config" ON public.site_config;
+
+-- Tạo các Policy phân quyền đọc/ghi công khai
 CREATE POLICY "Public Select Users" ON public.users FOR SELECT USING (true);
 CREATE POLICY "Public Select Categories" ON public.categories FOR SELECT USING (true);
 CREATE POLICY "Public Select Articles" ON public.articles FOR SELECT USING (true);
@@ -160,7 +184,6 @@ CREATE POLICY "Public Select Schedules" ON public.schedules FOR SELECT USING (tr
 CREATE POLICY "Public Select Announcements" ON public.announcements FOR SELECT USING (true);
 CREATE POLICY "Public Select SiteConfig" ON public.site_config FOR SELECT USING (true);
 
--- Allow Public Insert / Update / Delete for Portal Management
 CREATE POLICY "Public All Users" ON public.users FOR ALL USING (true);
 CREATE POLICY "Public All Articles" ON public.articles FOR ALL USING (true);
 CREATE POLICY "Public All Documents" ON public.documents FOR ALL USING (true);
@@ -171,7 +194,7 @@ CREATE POLICY "Public All Schedules" ON public.schedules FOR ALL USING (true);
 CREATE POLICY "Public All SiteConfig" ON public.site_config FOR ALL USING (true);
 
 -- =========================================================================
--- NẠP DỮ LIỆU MẪU BAN ĐẦU (SEED INITIAL DATA)
+-- NẠP DỮ LIỆU MẪU BAN ĐẦU (SEED INITIAL DATA - AN TOÀN ON CONFLICT)
 -- =========================================================================
 
 -- Seed Categories
