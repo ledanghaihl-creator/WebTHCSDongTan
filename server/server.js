@@ -74,17 +74,22 @@ app.get('*', (req, res) => {
   }
 });
 
-const server = app.listen(PORT, () => {
-  console.log(`=======================================================`);
-  console.log(`🚀 API Gateway & Backend Services THCS Đồng Tân`);
-  console.log(`🌐 Website đang chạy tại: http://localhost:${PORT}`);
-  console.log(`=======================================================`);
-});
+export default app;
 
-server.on('error', (err) => {
-  if (err.code === 'EADDRINUSE') {
-    console.log(`⚠️ Cổng ${PORT} đang được sử dụng bởi tiến trình khác. Đang tự động kết nối...`);
-  } else {
-    console.error('Lỗi khởi động Server:', err);
-  }
-});
+if (!process.env.VERCEL) {
+  const server = app.listen(PORT, () => {
+    console.log(`=======================================================`);
+    console.log(`🚀 API Gateway & Backend Services THCS Đồng Tân`);
+    console.log(`🌐 Website đang chạy tại: http://localhost:${PORT}`);
+    console.log(`=======================================================`);
+  });
+
+  server.on('error', (err) => {
+    if (err.code === 'EADDRINUSE') {
+      console.log(`⚠️ Cổng ${PORT} đang được sử dụng bởi tiến trình khác. Đang tự động kết nối...`);
+    } else {
+      console.error('Lỗi khởi động Server:', err);
+    }
+  });
+}
+
