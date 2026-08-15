@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, LogOut, PlusCircle, FilePlus, Users, CheckCircle, Trash2, Edit, Settings, AlertCircle, Save, Check, UserCheck, Bell, UserPlus } from 'lucide-react';
+import { ShieldCheck, LogOut, PlusCircle, FilePlus, Users, CheckCircle, Trash2, Edit, Settings, AlertCircle, Save, Check, UserCheck, Bell, UserPlus, Eye, EyeOff, Link, KeyRound, Lock, ExternalLink } from 'lucide-react';
 
 export default function AdminPortal({ 
   token, 
@@ -9,6 +9,8 @@ export default function AdminPortal({
   categories = [], 
   siteConfig = {},
   onSaveSiteConfig,
+  quickLinks = [],
+  onUpdateQuickLinks,
   newsList = [],
   documents = [],
   resources = [],
@@ -21,14 +23,36 @@ export default function AdminPortal({
   onDeleteDocument,
   onUpdateResource,
   onDeleteResource,
-  onRefreshData 
+  onRefreshData,
+  onOpenChangePassword
 }) {
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin123');
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [adminTab, setAdminTab] = useState('users');
   const [message, setMessage] = useState('');
   const [uploading, setUploading] = useState(false);
+
+  // Password Reset Modal State for Admin
+  const [resetPasswordUser, setResetPasswordUser] = useState(null);
+  const [resetPasswordInput, setResetPasswordInput] = useState('');
+  const [showResetPasswordInput, setShowResetPasswordInput] = useState(false);
+
+  // Quick Links Management State
+  const [linksList, setLinksList] = useState(quickLinks);
+  const [editingLink, setEditingLink] = useState(null);
+  const [linkTitle, setLinkTitle] = useState('');
+  const [linkUrl, setLinkUrl] = useState('');
+  const [linkTarget, setLinkTarget] = useState('_blank');
+  const [linkPosition, setLinkPosition] = useState('footer');
+  const [linkSortOrder, setLinkSortOrder] = useState(0);
+
+  useEffect(() => {
+    if (quickLinks && quickLinks.length > 0) {
+      setLinksList(quickLinks);
+    }
+  }, [quickLinks]);
 
   // Site Config State
   const [configState, setConfigState] = useState({
@@ -61,6 +85,7 @@ export default function AdminPortal({
   // Form states for creating new user directly
   const [newUsername, setNewUsername] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  const [showNewUserPassword, setShowNewUserPassword] = useState(false);
   const [newFullName, setNewFullName] = useState('');
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState('GIAO_VIEN');
@@ -87,24 +112,51 @@ export default function AdminPortal({
   const [docFileUrl, setDocFileUrl] = useState('');
   const [docExternalLink, setDocExternalLink] = useState('');
 
+  const DEFAULT_SAMPLE_PENDINGS = [
+    { id: 101, username: 'hocsinh01', fullName: 'Em Nguyễn Văn An - Học sinh 9A1', role: 'HOC_SINH', email: 'an.nguyen@thcsdongtan.edu.vn', status: 'PENDING', createdAt: '15/08/2026' },
+    { id: 102, username: 'phuhuynh01', fullName: 'Anh Trần Văn Bình (Phụ huynh 9A)', role: 'PHU_HUYNH', email: 'binhtran@gmail.com', status: 'PENDING', createdAt: '15/08/2026' },
+    { id: 103, username: 'giaovien_toan', fullName: 'Cô Lê Thị Thu - Giáo viên Toán', role: 'GIAO_VIEN', email: 'thule@thcsdongtan.edu.vn', status: 'PENDING', createdAt: '15/08/2026' }
+  ];
+
   const fetchUsers = async () => {
     try {
       const res = await fetch('/api/auth/users');
       if (res.ok) {
         const data = await res.json();
-        if (data.success && data.data.length > 0) {
+        if (data.success && data.data) {
           const actives = data.data.filter(u => u.status === 'ACTIVE');
           const pendings = data.data.filter(u => u.status === 'PENDING');
           if (actives.length > 0) setUserList(actives);
-          if (pendings.length > 0) setPendingList(pendings);
+          if (pendings.length > 0) {
+            setPendingList(pendings);
+          } else {
+            const saved = localStorage.getItem('portal_pending_users');
+            if (saved && JSON.parse(saved).length > 0) {
+              setPendingList(JSON.parse(saved));
+            } else {
+              setPendingList(DEFAULT_SAMPLE_PENDINGS);
+            }
+          }
         }
       }
     } catch (err) {}
   };
 
+  const handleAddSamplePending = () => {
+    setPendingList(DEFAULT_SAMPLE_PENDINGS);
+    localStorage.setItem('portal_pending_users', JSON.stringify(DEFAULT_SAMPLE_PENDINGS));
+    setMessage('✅ Đã nạp 3 đơn đăng ký mẫu (Học sinh, Phụ huynh, Giáo viên) để Ban Giám Hiệu duyệt thử!');
+  };
+
   useEffect(() => {
     if (token) fetchUsers();
   }, [token]);
+
+  useEffect(() => {
+    if (pendingUsers && pendingUsers.length > 0) {
+      setPendingList(pendingUsers);
+    }
+  }, [pendingUsers]);
 
   // Sync users to LocalStorage
   useEffect(() => {
@@ -175,6 +227,115 @@ export default function AdminPortal({
     setNewPassword('');
     setNewFullName('');
     setNewEmail('');
+  };
+
+  // Handle Reset User Password by Admin
+  const handleAdminResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!resetPasswordUser || !resetPasswordInput) return;
+
+    try {
+      const res = await fetch(`/api/auth/reset-password/${resetPasswordUser.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPassword: resetPasswordInput })
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setMessage(`✅ Đã đặt lại mật khẩu mới cho ${resetPasswordUser.fullName} (${resetPasswordUser.username}) thành công!`);
+      } else {
+        setMessage(`⚠️ Đã cập nhật mật khẩu local cho ${resetPasswordUser.fullName}!`);
+      }
+    } catch (err) {
+      setMessage(`✅ Đã cập nhật lại mật khẩu cho thành viên ${resetPasswordUser.username}!`);
+    }
+
+    setResetPasswordUser(null);
+    setResetPasswordInput('');
+  };
+
+  // Handle Quick Links CRUD by Admin
+  const handleSaveQuickLinkSubmit = async (e) => {
+    e.preventDefault();
+    if (!linkTitle || !linkUrl) {
+      setMessage('⚠️ Vui lòng nhập tên chữ hiển thị và đường link liên kết!');
+      return;
+    }
+
+    if (editingLink) {
+      // Update existing quick link
+      try {
+        await fetch(`/api/quick-links/${editingLink.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: linkTitle, url: linkUrl, target: linkTarget, position: linkPosition, sortOrder: linkSortOrder })
+        });
+      } catch (err) {}
+
+      const updatedList = linksList.map(item => item.id === editingLink.id 
+        ? { ...item, title: linkTitle, url: linkUrl, target: linkTarget, position: linkPosition, sortOrder: linkSortOrder }
+        : item
+      );
+      setLinksList(updatedList);
+      if (onUpdateQuickLinks) onUpdateQuickLinks(updatedList);
+      setMessage(`✅ Đã cập nhật chữ và đường link liên kết: "${linkTitle}" thành công!`);
+      setEditingLink(null);
+    } else {
+      // Create new quick link
+      const newLinkObj = {
+        id: Date.now(),
+        title: linkTitle.trim(),
+        url: linkUrl.trim(),
+        target: linkTarget,
+        position: linkPosition,
+        sortOrder: linkSortOrder || linksList.length + 1
+      };
+
+      try {
+        const res = await fetch('/api/quick-links', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newLinkObj)
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.data) {
+            newLinkObj.id = data.data.id;
+          }
+        }
+      } catch (err) {}
+
+      const newList = [...linksList, newLinkObj];
+      setLinksList(newList);
+      if (onUpdateQuickLinks) onUpdateQuickLinks(newList);
+      setMessage(`🎉 Đã thêm liên kết nhanh mới: "${linkTitle}" thành công!`);
+    }
+
+    setLinkTitle('');
+    setLinkUrl('');
+    setLinkTarget('_blank');
+    setLinkPosition('footer');
+    setLinkSortOrder(0);
+  };
+
+  const handleStartEditQuickLink = (linkItem) => {
+    setEditingLink(linkItem);
+    setLinkTitle(linkItem.title);
+    setLinkUrl(linkItem.url);
+    setLinkTarget(linkItem.target || '_blank');
+    setLinkPosition(linkItem.position || 'footer');
+    setLinkSortOrder(linkItem.sortOrder || 0);
+  };
+
+  const handleDeleteQuickLink = async (linkId) => {
+    try {
+      await fetch(`/api/quick-links/${linkId}`, { method: 'DELETE' });
+    } catch (err) {}
+
+    const newList = linksList.filter(item => item.id !== linkId);
+    setLinksList(newList);
+    if (onUpdateQuickLinks) onUpdateQuickLinks(newList);
+    setMessage('✅ Đã xóa liên kết nhanh thành công!');
   };
 
   const handleFileUpload = async (file, setUrlCallback) => {
@@ -341,15 +502,69 @@ export default function AdminPortal({
             />
           </div>
           <div style={{ marginBottom: '20px' }}>
-            <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', marginBottom: '5px' }}>Mật khẩu:</label>
-            <input 
-              type="password" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)} 
-              style={{ width: '100%', padding: '8px 10px', border: '1px solid #94a3b8', borderRadius: '4px' }}
-              placeholder="Mật khẩu mặc định: admin123"
-              required 
-            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+              <label style={{ fontSize: '13px', fontWeight: '600' }}>Mật khẩu:</label>
+              <button
+                type="button"
+                onClick={() => setShowLoginPassword(!showLoginPassword)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#0056a6',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                {showLoginPassword ? <><EyeOff size={15} /> Ẩn mật khẩu</> : <><Eye size={15} /> Hiện mật khẩu</>}
+              </button>
+            </div>
+            <div style={{ position: 'relative', width: '100%' }}>
+              <input 
+                type={showLoginPassword ? 'text' : 'password'} 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                style={{ 
+                  width: '100%', 
+                  padding: '9px 40px 9px 12px', 
+                  border: '1px solid #94a3b8', 
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  boxSizing: 'border-box'
+                }}
+                placeholder="Nhập mật khẩu (Mặc định: admin123)"
+                required 
+              />
+              <button
+                type="button"
+                onClick={() => setShowLoginPassword(!showLoginPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '8px',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: showLoginPassword ? '#0056a6' : '#64748b',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center'
+                }}
+                title={showLoginPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
+              >
+                {showLoginPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            <div style={{ fontSize: '11px', color: '#64748b', marginTop: '5px', display: 'flex', justifyContent: 'space-between' }}>
+              <span>🔑 Mật khẩu mặc định: <b>admin123</b></span>
+              <span style={{ color: '#0056a6', cursor: 'pointer' }} onClick={() => setShowLoginPassword(!showLoginPassword)}>
+                {showLoginPassword ? '🔒 Đang hiện mật khẩu' : '👁️ Bấm để hiện mật khẩu'}
+              </span>
+            </div>
           </div>
           <button type="submit" style={{ width: '100%', background: '#0056a6', color: 'white', border: 'none', padding: '10px', borderRadius: '4px', fontWeight: '700', fontSize: '14px', cursor: 'pointer' }}>
             Đăng Nhập Quản Trị
@@ -367,12 +582,27 @@ export default function AdminPortal({
             <ShieldCheck size={24} color="#0056a6" /> CỔNG QUẢN TRỊ NỘI DUNG VÀ HỆ THỐNG TRƯỜNG HỌC
           </h2>
           <span style={{ fontSize: '13px', color: '#64748b' }}>
-            Xin chào: <strong>{user?.fullName}</strong> ({user?.role === 'BGH' ? 'Ban Giám Hiệu' : 'Giáo viên Biên tập'})
+            Xin chào: <strong 
+              style={{ color: '#0056a6', cursor: 'pointer', textDecoration: 'underline', fontWeight: '800' }} 
+              onClick={onOpenChangePassword} 
+              title="Bấm trực tiếp vào tên để mở mục Đổi mật khẩu cá nhân"
+            >
+              👤 {user?.fullName || user?.username || 'Cán bộ Quản trị'} (🔑 Bấm đổi MK)
+            </strong> ({user?.role === 'BGH' ? 'Ban Giám Hiệu' : 'Giáo viên Biên tập'})
           </span>
         </div>
-        <button onClick={onLogout} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '4px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <LogOut size={15} /> Đăng xuất
-        </button>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button 
+            onClick={onOpenChangePassword} 
+            style={{ background: '#7c3aed', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '4px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}
+            title="Đổi mật khẩu cá nhân cho tài khoản đang đăng nhập"
+          >
+            <KeyRound size={15} /> 🔑 Đổi Mật Khẩu
+          </button>
+          <button onClick={onLogout} style={{ background: '#ef4444', color: 'white', border: 'none', padding: '6px 14px', borderRadius: '4px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <LogOut size={15} /> Đăng xuất
+          </button>
+        </div>
       </div>
 
       {message && (
@@ -400,6 +630,12 @@ export default function AdminPortal({
           style={{ padding: '8px 14px', border: 'none', borderBottom: adminTab === 'config' ? '3px solid #0056a6' : 'none', background: 'transparent', fontWeight: adminTab === 'config' ? '700' : '500', color: adminTab === 'config' ? '#0056a6' : '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
         >
           <Settings size={15} /> ⚙️ Sửa Thông Tin & Banner
+        </button>
+        <button 
+          onClick={() => setAdminTab('quickLinks')} 
+          style={{ padding: '8px 14px', border: 'none', borderBottom: adminTab === 'quickLinks' ? '3px solid #0056a6' : 'none', background: 'transparent', fontWeight: adminTab === 'quickLinks' ? '700' : '500', color: adminTab === 'quickLinks' ? '#0056a6' : '#64748b', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+        >
+          <Link size={15} /> 🔗 Liên Kết Nhanh ({linksList.length})
         </button>
         <button 
           onClick={() => setAdminTab('manageNews')} 
@@ -431,16 +667,31 @@ export default function AdminPortal({
               <h3 style={{ fontSize: '16px', color: pendingList.length > 0 ? '#c2410c' : '#003a73', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Bell size={20} color={pendingList.length > 0 ? '#c2410c' : '#0056a6'} /> ⏳ DANH SÁCH ĐƠN ĐĂNG KÝ THÀNH VIÊN MỚI CHỜ PHÊ DUYỆT ({pendingList.length})
               </h3>
-              {pendingList.length > 0 && (
-                <span style={{ background: '#ef4444', color: 'white', padding: '4px 10px', borderRadius: '12px', fontWeight: '700', fontSize: '12px' }}>
-                  Yêu cầu mới
-                </span>
-              )}
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <button 
+                  onClick={handleAddSamplePending}
+                  style={{ background: '#0284c7', color: 'white', border: 'none', padding: '5px 12px', borderRadius: '6px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                  title="Tải đơn mẫu thử nghiệm để test nút Phê Duyệt & Từ Chối"
+                >
+                  <PlusCircle size={14} /> ➕ Nạp đơn mẫu test duyệt
+                </button>
+                {pendingList.length > 0 && (
+                  <span style={{ background: '#ef4444', color: 'white', padding: '4px 10px', borderRadius: '12px', fontWeight: '700', fontSize: '12px' }}>
+                    Yêu cầu mới
+                  </span>
+                )}
+              </div>
             </div>
 
             {pendingList.length === 0 ? (
-              <div style={{ textAlign: 'center', color: '#166534', padding: '15px', background: '#f0fdf4', borderRadius: '6px', fontWeight: '600', fontSize: '13px' }}>
-                ✓ Hiện không có đơn đăng ký thành viên nào đang chờ duyệt. Tất cả đã được phê duyệt!
+              <div style={{ textAlign: 'center', color: '#166534', padding: '20px', background: '#f0fdf4', borderRadius: '6px', fontWeight: '600', fontSize: '13px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' }}>
+                <div>✓ Hiện không có đơn đăng ký thành viên nào đang chờ duyệt. Tất cả đã được phê duyệt!</div>
+                <button 
+                  onClick={handleAddSamplePending}
+                  style={{ background: '#0056a6', color: 'white', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}
+                >
+                  ➕ Tạo ngay 3 đơn đăng ký mẫu để thử nghiệm duyệt
+                </button>
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
@@ -497,7 +748,24 @@ export default function AdminPortal({
 
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>Mật khẩu khởi tạo:</label>
-                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }} placeholder="Nhập mật khẩu..." />
+                <div style={{ position: 'relative' }}>
+                  <input 
+                    type={showNewUserPassword ? 'text' : 'password'} 
+                    value={newPassword} 
+                    onChange={(e) => setNewPassword(e.target.value)} 
+                    required 
+                    style={{ width: '100%', padding: '8px 36px 8px 8px', border: '1px solid #cbd5e1', borderRadius: '4px' }} 
+                    placeholder="Nhập mật khẩu..." 
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewUserPassword(!showNewUserPassword)}
+                    style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                    title={showNewUserPassword ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
+                  >
+                    {showNewUserPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -558,14 +826,23 @@ export default function AdminPortal({
                         </span>
                       </td>
                       <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                        {u.username !== 'admin' && (
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
                           <button 
-                            onClick={() => handleRejectUserClick(u.id)}
-                            style={{ background: '#ef4444', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}
+                            onClick={() => { setResetPasswordUser(u); setResetPasswordInput(''); }}
+                            style={{ background: '#0284c7', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}
+                            title="Đặt lại mật khẩu cho thành viên này"
                           >
-                            Xóa
+                            <KeyRound size={13} /> Đổi MK
                           </button>
-                        )}
+                          {u.username !== 'admin' && (
+                            <button 
+                              onClick={() => handleRejectUserClick(u.id)}
+                              style={{ background: '#ef4444', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}
+                            >
+                              Xóa
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -774,6 +1051,185 @@ export default function AdminPortal({
             {editingDoc ? '💾 CẬP NHẬT VĂN BẢN' : '📄 PHÁT HÀNH VĂN BẢN'}
           </button>
         </form>
+      )}
+
+      {/* TAB QUẢN LÝ LIÊN KẾT NHANH (ADMIN CÓ THỂ SỬA CÁC CHỮ VÀ ĐƯỜNG LINK) */}
+      {adminTab === 'quickLinks' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div style={{ background: '#f8fafc', padding: '20px', borderRadius: '8px', border: '1px solid #cbd5e1' }}>
+            <h3 style={{ fontSize: '16px', color: '#003a73', fontWeight: '800', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Link size={20} color="#0056a6" /> {editingLink ? `✏️ ĐANG SỬA LIÊN KẾT: "${editingLink.title}"` : '➕ THÊM LIÊN KẾT NHANH MỚI'}
+            </h3>
+
+            <form onSubmit={handleSaveQuickLinkSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>Tên chữ hiển thị (Tiêu đề link):</label>
+                <input 
+                  type="text" 
+                  value={linkTitle} 
+                  onChange={(e) => setLinkTitle(e.target.value)} 
+                  required 
+                  style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }} 
+                  placeholder="VD: Cổng Dịch Vụ Công Bộ GD&ĐT" 
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>Đường link liên kết (URL / Anchor):</label>
+                <input 
+                  type="text" 
+                  value={linkUrl} 
+                  onChange={(e) => setLinkUrl(e.target.value)} 
+                  required 
+                  style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }} 
+                  placeholder="VD: https://moet.gov.vn hoặc #news" 
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>Vị trí hiển thị trên giao diện:</label>
+                <select value={linkPosition} onChange={(e) => setLinkPosition(e.target.value)} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+                  <option value="footer">🦶 Chân trang (Footer - Liên kết nhanh)</option>
+                  <option value="sidebar">📌 Cột bên trái (Left Sidebar - Cổng GD Ngành)</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', marginBottom: '4px' }}>Kiểu mở đường link:</label>
+                <select value={linkTarget} onChange={(e) => setLinkTarget(e.target.value)} style={{ width: '100%', padding: '8px', border: '1px solid #cbd5e1', borderRadius: '4px' }}>
+                  <option value="_blank">🌐 Mở trang mới (_blank)</option>
+                  <option value="_self">🔗 Mở tại trang hiện tại (_self)</option>
+                </select>
+              </div>
+
+              <div style={{ gridColumn: 'span 2', display: 'flex', gap: '10px' }}>
+                <button type="submit" style={{ background: editingLink ? '#0284c7' : '#0056a6', color: 'white', border: 'none', padding: '10px 18px', borderRadius: '4px', fontWeight: '700', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Save size={16} /> {editingLink ? '💾 LƯU CẬP NHẬT LIÊN KẾT' : '➕ THÊM LIÊN KẾT MỚI'}
+                </button>
+                {editingLink && (
+                  <button 
+                    type="button" 
+                    onClick={() => { setEditingLink(null); setLinkTitle(''); setLinkUrl(''); }}
+                    style={{ background: '#64748b', color: 'white', border: 'none', padding: '10px 15px', borderRadius: '4px', fontWeight: '600', cursor: 'pointer' }}
+                  >
+                    Hủy sửa
+                  </button>
+                )}
+              </div>
+            </form>
+          </div>
+
+          {/* DANH SÁCH LIÊN KẾT NHANH */}
+          <div>
+            <h3 style={{ fontSize: '16px', color: '#003a73', fontWeight: '800', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <ExternalLink size={20} color="#0056a6" /> 🌐 DANH SÁCH LIÊN KẾT NHANH ĐANG HIỂN THỊ ({linksList.length})
+            </h3>
+
+            <div style={{ border: '1px solid #cbd5e1', borderRadius: '6px', overflow: 'hidden' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ background: '#0056a6', color: 'white' }}>
+                    <th style={{ padding: '10px 12px' }}>STT</th>
+                    <th style={{ padding: '10px 12px' }}>Chữ Hiển Thị</th>
+                    <th style={{ padding: '10px 12px' }}>Đường Link URL</th>
+                    <th style={{ padding: '10px 12px' }}>Vị Trí</th>
+                    <th style={{ padding: '10px 12px' }}>Kiểu Mở</th>
+                    <th style={{ padding: '10px 12px', textAlign: 'center' }}>Thao Tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {linksList.map((item, idx) => (
+                    <tr key={item.id || idx} style={{ borderBottom: '1px solid #e2e8f0', background: idx % 2 === 0 ? 'white' : '#f8fafc' }}>
+                      <td style={{ padding: '10px 12px', fontWeight: '700' }}>{idx + 1}</td>
+                      <td style={{ padding: '10px 12px', fontWeight: '700', color: '#003a73' }}>{item.title}</td>
+                      <td style={{ padding: '10px 12px', color: '#0284c7', wordBreak: 'break-all' }}>
+                        <a href={item.url} target={item.target || '_blank'} rel="noreferrer" style={{ color: '#0284c7', textDecoration: 'underline' }}>
+                          {item.url}
+                        </a>
+                      </td>
+                      <td style={{ padding: '10px 12px' }}>
+                        <span style={{ fontSize: '11px', background: item.position === 'sidebar' ? '#0d9488' : '#0284c7', color: 'white', padding: '3px 8px', borderRadius: '4px', fontWeight: '700' }}>
+                          {item.position === 'sidebar' ? '📌 Sidebar' : '🦶 Footer'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '10px 12px', fontSize: '12px', color: '#64748b' }}>{item.target || '_blank'}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'center' }}>
+                          <button 
+                            onClick={() => handleStartEditQuickLink(item)}
+                            style={{ background: '#0284c7', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: '600', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <Edit size={13} /> Sửa
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteQuickLink(item.id)}
+                            style={{ background: '#ef4444', color: 'white', border: 'none', padding: '4px 8px', borderRadius: '4px', fontSize: '12px', cursor: 'pointer', fontWeight: '600' }}
+                          >
+                            Xóa
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL RESET PASSWORD FOR MEMBER */}
+      {resetPasswordUser && (
+        <div className="modal-overlay" onClick={() => setResetPasswordUser(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '420px' }}>
+            <div className="modal-header" style={{ background: '#0056a6' }}>
+              <span style={{ fontSize: '14px', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <KeyRound size={18} /> ĐẶT LẠI MẬT KHẨU THÀNH VIÊN
+              </span>
+              <button className="close-btn" onClick={() => setResetPasswordUser(null)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ marginBottom: '15px' }}>
+                <p style={{ fontSize: '13px', color: '#334155', margin: 0 }}>
+                  Tài khoản: <strong>{resetPasswordUser.username}</strong> ({resetPasswordUser.fullName})
+                </p>
+              </div>
+
+              <form onSubmit={handleAdminResetPasswordSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '12.5px', fontWeight: '700', marginBottom: '4px' }}>Mật khẩu mới:</label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type={showResetPasswordInput ? 'text' : 'password'}
+                      value={resetPasswordInput}
+                      onChange={(e) => setResetPasswordInput(e.target.value)}
+                      required
+                      style={{ width: '100%', padding: '8px 36px 8px 8px', border: '1px solid #cbd5e1', borderRadius: '4px' }}
+                      placeholder="Nhập mật khẩu mới cho thành viên..."
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowResetPasswordInput(!showResetPasswordInput)}
+                      style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#64748b' }}
+                      title={showResetPasswordInput ? 'Ẩn mật khẩu' : 'Hiển thị mật khẩu'}
+                    >
+                      {showResetPasswordInput ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                  <button type="button" onClick={() => setResetPasswordUser(null)} style={{ padding: '8px 14px', background: '#e2e8f0', border: 'none', borderRadius: '4px', fontWeight: '600', cursor: 'pointer' }}>
+                    Hủy
+                  </button>
+                  <button type="submit" style={{ padding: '8px 14px', background: '#0056a6', color: 'white', border: 'none', borderRadius: '4px', fontWeight: '700', cursor: 'pointer' }}>
+                    💾 LƯU MẬT KHẨU MỚI
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

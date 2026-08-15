@@ -10,6 +10,7 @@ import DocumentDetailModal from './components/DocumentDetailModal';
 import QuickUploadModal from './components/QuickUploadModal';
 import BulkUploadModal from './components/BulkUploadModal';
 import RegisterModal from './components/RegisterModal';
+import ChangePasswordModal from './components/ChangePasswordModal';
 import AdminPortal from './components/AdminPortal';
 import IntroView from './components/IntroView';
 import AlbumsView from './components/AlbumsView';
@@ -146,6 +147,21 @@ export default function App() {
   const [categories, setCategories] = useState(INITIAL_CATEGORIES);
   const [announcements, setAnnouncements] = useState(INITIAL_ANNOUNCEMENTS);
 
+  // Quick Links State (Liên kết nhanh - Admin có thể chỉnh sửa)
+  const [quickLinks, setQuickLinks] = useState(() => {
+    const saved = localStorage.getItem('portal_quick_links');
+    return saved ? JSON.parse(saved) : [
+      { id: 1, title: 'Giới thiệu nhà trường', url: '#intro', target: '_self', position: 'footer', sortOrder: 1 },
+      { id: 2, title: 'Tin tức - Sự kiện nổi bật', url: '#news', target: '_self', position: 'footer', sortOrder: 2 },
+      { id: 3, title: 'Văn bản chỉ đạo & Quy chế', url: '#docs', target: '_self', position: 'footer', sortOrder: 3 },
+      { id: 4, title: 'Kho Tài nguyên & Đề thi', url: '#resources', target: '_self', position: 'footer', sortOrder: 4 },
+      { id: 5, title: 'Lịch công tác tuần', url: '#schedule', target: '_self', position: 'footer', sortOrder: 5 },
+      { id: 6, title: 'Bộ Giáo Dục & Đào Tạo', url: 'http://moet.gov.vn', target: '_blank', position: 'sidebar', sortOrder: 6 },
+      { id: 7, title: 'Sở GD&ĐT Tỉnh Lạng Sơn', url: 'https://langson.edu.vn', target: '_blank', position: 'sidebar', sortOrder: 7 },
+      { id: 8, title: 'UBND Xã Hữu Lũng', url: 'https://huulung.langson.gov.vn', target: '_blank', position: 'sidebar', sortOrder: 8 }
+    ];
+  });
+
   // Modal States
   const [selectedArticleId, setSelectedArticleId] = useState(null);
   const [activeArticle, setActiveArticle] = useState(null);
@@ -158,10 +174,29 @@ export default function App() {
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [uploadDefaultTab, setUploadDefaultTab] = useState('docs');
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+
+  // Sync quickLinks to LocalStorage
+  useEffect(() => {
+    localStorage.setItem('portal_quick_links', JSON.stringify(quickLinks));
+  }, [quickLinks]);
 
   // Admin Auth State
   const [token, setToken] = useState(localStorage.getItem('adminToken') || '');
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('adminUser') || 'null'));
+
+  // Fetch Quick Links from Backend SQLite API
+  const fetchQuickLinks = async () => {
+    try {
+      const res = await fetch('/api/quick-links');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.data && data.data.length > 0) {
+          setQuickLinks(data.data);
+        }
+      }
+    } catch (err) {}
+  };
 
   // Main Live Data Fetcher from Supabase Cloud Postgres
   const fetchCloudData = async () => {
@@ -307,6 +342,7 @@ export default function App() {
 
   useEffect(() => {
     fetchCloudData();
+    fetchQuickLinks();
     const interval = setInterval(fetchCloudData, 10000);
     return () => clearInterval(interval);
   }, []);
@@ -498,6 +534,7 @@ export default function App() {
       <HeaderBanner siteConfig={siteConfig} />
 
       <Navbar 
+        user={user}
         activeTab={activeTab} 
         setActiveTab={(tab) => {
           setActiveTab(tab);
@@ -507,6 +544,8 @@ export default function App() {
         onOpenUpload={() => handleOpenUpload('docs')}
         onOpenBulkUpload={handleOpenBulkUpload}
         onOpenRegister={() => setShowRegisterModal(true)}
+        onOpenChangePassword={() => setShowChangePasswordModal(true)}
+        onLogout={handleLogout}
       />
 
       <SubBar announcements={announcements} onSearch={handleSearch} />
@@ -519,9 +558,12 @@ export default function App() {
             user={user} 
             onLogin={handleLoginSuccess} 
             onLogout={handleLogout} 
+            onOpenChangePassword={() => setShowChangePasswordModal(true)}
             categories={categories}
             siteConfig={siteConfig}
             onSaveSiteConfig={handleSaveSiteConfig}
+            quickLinks={quickLinks}
+            onUpdateQuickLinks={(newList) => setQuickLinks(newList)}
             newsList={newsList}
             documents={documents}
             resources={resources}
@@ -604,6 +646,7 @@ export default function App() {
             selectedCategory={selectedCategory} 
             onSelectCategory={(catId) => setSelectedCategory(catId)}
             onSelectArticle={handleSelectArticle}
+            quickLinks={quickLinks}
           />
 
           <MainNewsCenter 
@@ -673,7 +716,20 @@ export default function App() {
         />
       )}
 
-      <Footer siteConfig={siteConfig} />
+      {/* User Change Password Modal */}
+      {showChangePasswordModal && (
+        <ChangePasswordModal 
+          user={user}
+          onClose={() => setShowChangePasswordModal(false)}
+          onSuccess={() => setShowChangePasswordModal(false)}
+        />
+      )}
+
+      <Footer 
+        siteConfig={siteConfig} 
+        quickLinks={quickLinks} 
+        onSelectTab={(tabKey) => setActiveTab(tabKey)} 
+      />
     </div>
   );
 }
