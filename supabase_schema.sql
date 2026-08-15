@@ -175,8 +175,12 @@ ALTER TABLE public.albums ADD COLUMN IF NOT EXISTS external_link TEXT DEFAULT ''
 ALTER TABLE public.resources ADD COLUMN IF NOT EXISTS file_name TEXT DEFAULT '';
 ALTER TABLE public.resources ADD COLUMN IF NOT EXISTS external_link TEXT DEFAULT '';
 
--- Cập nhật mặc định cho status nếu giá trị đang là NULL
-UPDATE public.users SET status = 'ACTIVE' WHERE status IS NULL;
+-- Cập nhật mặc định cho status nếu giá trị đang là NULL hoặc APPROVED
+UPDATE public.users SET status = 'ACTIVE' WHERE status IS NULL OR status = 'APPROVED';
+UPDATE public.users SET role = 'BGH' WHERE role = 'ADMIN';
+UPDATE public.users SET role = 'GIAO_VIEN' WHERE role = 'TEACHER';
+UPDATE public.users SET role = 'HOC_SINH' WHERE role = 'STUDENT';
+UPDATE public.users SET role = 'PHU_HUYNH' WHERE role = 'PARENT';
 
 -- -------------------------------------------------------------------------
 -- PHẦN 2: BẬT BẢO MẬT ROW LEVEL SECURITY (KHI BẢNG ĐÃ TỒN TẠI)
