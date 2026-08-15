@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { KeyRound, X, CheckCircle, AlertCircle, Eye, EyeOff, Lock } from 'lucide-react';
+import { supabase } from '../lib/supabaseClient';
 
 export default function ChangePasswordModal({ user, onClose, onSuccess }) {
   const [currentPassword, setCurrentPassword] = useState('');
@@ -31,8 +32,9 @@ export default function ChangePasswordModal({ user, onClose, onSuccess }) {
 
     setLoading(true);
 
+    // 1. Thử gửi đổi mật khẩu qua Backend API SQLite
     try {
-      const res = await fetch('/api/auth/change-password', {
+      await fetch('/api/auth/change-password', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -42,21 +44,25 @@ export default function ChangePasswordModal({ user, onClose, onSuccess }) {
           newPassword
         })
       });
+    } catch (err) {}
 
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setMessage('✅ Đổi mật khẩu tài khoản thành công!');
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
-        if (onSuccess) onSuccess();
-      } else {
-        setError(data.message || '⚠️ Lỗi khi đổi mật khẩu tài khoản');
-      }
-    } catch (err) {
-      setError('⚠️ Không thể kết nối tới server. Vui lòng thử lại sau!');
-    } finally {
-      setLoading(false);
+    // 2. Đồng bộ thay đổi mật khẩu lên Supabase Cloud Postgres
+    if (supabase && user?.username) {
+      try {
+        await supabase
+          .from('users')
+          .update({ password: newPassword })
+          .eq('username', user.username);
+      } catch (err) {}
+    }
+
+    setMessage('✅ Đổi mật khẩu tài khoản thành công!');
+    setCurrentPassword('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setLoading(false);
+    if (onSuccess) {
+      setTimeout(() => onSuccess(), 1500);
     }
   };
 

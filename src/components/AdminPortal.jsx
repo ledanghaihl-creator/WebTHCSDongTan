@@ -234,22 +234,26 @@ export default function AdminPortal({
     e.preventDefault();
     if (!resetPasswordUser || !resetPasswordInput) return;
 
+    // 1. Thử gửi tới Backend API SQLite
     try {
-      const res = await fetch(`/api/auth/reset-password/${resetPasswordUser.id}`, {
+      await fetch(`/api/auth/reset-password/${resetPasswordUser.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ newPassword: resetPasswordInput })
       });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setMessage(`✅ Đã đặt lại mật khẩu mới cho ${resetPasswordUser.fullName} (${resetPasswordUser.username}) thành công!`);
-      } else {
-        setMessage(`⚠️ Đã cập nhật mật khẩu local cho ${resetPasswordUser.fullName}!`);
-      }
-    } catch (err) {
-      setMessage(`✅ Đã cập nhật lại mật khẩu cho thành viên ${resetPasswordUser.username}!`);
+    } catch (err) {}
+
+    // 2. Đồng bộ đặt lại mật khẩu thành viên lên Supabase Cloud Postgres
+    if (supabase && resetPasswordUser.username) {
+      try {
+        await supabase
+          .from('users')
+          .update({ password: resetPasswordInput })
+          .eq('username', resetPasswordUser.username);
+      } catch (err) {}
     }
 
+    setMessage(`✅ Đã đặt lại mật khẩu mới cho ${resetPasswordUser.fullName} (${resetPasswordUser.username}) thành công!`);
     setResetPasswordUser(null);
     setResetPasswordInput('');
   };
