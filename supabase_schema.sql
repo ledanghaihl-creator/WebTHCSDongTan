@@ -265,9 +265,9 @@ INSERT INTO public.users (id, username, password, full_name, role, email, status
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.users (username, password, full_name, role, email, status) VALUES
-('hocsinh01', '$2a$10$84J.N1i1JvCjJmI/K2D/Me1M.Kx7XG1t3VnS3bK7V9tL.u8.k1u.', 'Em Nguyễn Văn An - Học sinh 9A1', 'HOC_SINH', 'an.nguyen@thcsdongtan.edu.vn', 'PENDING'),
-('phuhuynh01', '$2a$10$84J.N1i1JvCjJmI/K2D/Me1M.Kx7XG1t3VnS3bK7V9tL.u8.k1u.', 'Anh Trần Văn Bình (Phụ huynh 9A)', 'PHU_HUYNH', 'binhtran@gmail.com', 'PENDING'),
-('giaovien_toan', '$2a$10$84J.N1i1JvCjJmI/K2D/Me1M.Kx7XG1t3VnS3bK7V9tL.u8.k1u.', 'Cô Lê Thị Thu - Giáo viên Toán', 'GIAO_VIEN', 'thule@thcsdongtan.edu.vn', 'PENDING')
+('hocsinh01', '$2a$10$84J.N1i1JvCjJmI/K2D/Me1M.Kx7XG1t3VnS3bK7V9tL.u8.k1u.', 'Em Nguyễn Văn An - Học sinh 9A1', 'HOC_SINH', 'an.nguyen@thcsdongtan.edu.vn', 'ACTIVE'),
+('phuhuynh01', '$2a$10$84J.N1i1JvCjJmI/K2D/Me1M.Kx7XG1t3VnS3bK7V9tL.u8.k1u.', 'Anh Trần Văn Bình (Phụ huynh 9A)', 'PHU_HUYNH', 'binhtran@gmail.com', 'ACTIVE'),
+('giaovien_toan', '$2a$10$84J.N1i1JvCjJmI/K2D/Me1M.Kx7XG1t3VnS3bK7V9tL.u8.k1u.', 'Cô Lê Thị Thu - Giáo viên Toán', 'GIAO_VIEN', 'thule@thcsdongtan.edu.vn', 'ACTIVE')
 ON CONFLICT (username) DO NOTHING;
 
 INSERT INTO public.site_config (id, school_name, governing_body, slogan, address, phone, email, logo_url, banner_bg) VALUES
