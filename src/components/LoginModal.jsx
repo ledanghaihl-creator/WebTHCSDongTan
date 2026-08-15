@@ -35,7 +35,8 @@ export default function LoginModal({ onClose, onLoginSuccess, onOpenRegister }) 
       });
       const data = await res.json();
       if (res.ok && data.success && data.user) {
-        if (data.user.status === 'PENDING') {
+        const uStatus = data.user.status ? data.user.status.toUpperCase() : 'ACTIVE';
+        if (uStatus === 'PENDING' || uStatus === 'PENDING_APPROVAL') {
           setError('⏳ Tài khoản của bạn đã đăng ký nhưng ĐANG CHỜ BAN GIÁM HIỆU PHÊ DUYỆT. Vui lòng quay lại sau!');
           setLoading(false);
           return;
@@ -57,20 +58,26 @@ export default function LoginModal({ onClose, onLoginSuccess, onOpenRegister }) 
 
         if (users && users.length > 0) {
           const u = users[0];
-          // Kiểm tra mật khẩu (hỗ trợ hash hoặc text đơn giản)
-          if (u.status === 'PENDING') {
+          const uStatus = u.status ? u.status.toUpperCase() : 'ACTIVE';
+          if (uStatus === 'PENDING' || uStatus === 'PENDING_APPROVAL') {
             setError('⏳ Tài khoản của bạn đã đăng ký nhưng ĐANG CHỜ BAN GIÁM HIỆU PHÊ DUYỆT. Vui lòng quay lại sau!');
             setLoading(false);
             return;
           }
 
+          let mappedRole = u.role ? u.role.toUpperCase() : 'HOC_SINH';
+          if (mappedRole === 'ADMIN') mappedRole = 'BGH';
+          if (mappedRole === 'TEACHER') mappedRole = 'GIAO_VIEN';
+          if (mappedRole === 'STUDENT') mappedRole = 'HOC_SINH';
+          if (mappedRole === 'PARENT') mappedRole = 'PHU_HUYNH';
+
           authenticatedUser = {
             id: u.id,
             username: u.username,
-            fullName: u.full_name,
-            role: u.role,
+            fullName: u.full_name || u.fullName || u.username,
+            role: mappedRole,
             email: u.email,
-            status: u.status
+            status: 'ACTIVE'
           };
         }
       } catch (err) {}
