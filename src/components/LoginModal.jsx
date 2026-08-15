@@ -98,6 +98,10 @@ export default function LoginModal({ onClose, onLoginSuccess, onOpenRegister }) 
         authenticatedUser = { id: 2, username: 'giaovien', fullName: 'Cô Nguyễn Thị Hoa - Giáo Viên Văn', role: 'GIAO_VIEN', email: 'hoanguyen@thcsdongtan.edu.vn', status: 'ACTIVE' };
       } else if (cleanUsername === 'hocsinh01' && (cleanPassword === 'admin123' || cleanPassword === 'hocsinh')) {
         authenticatedUser = { id: 3, username: 'hocsinh01', fullName: 'Em Nguyễn Văn An - Học sinh 9A1', role: 'HOC_SINH', email: 'an.nguyen@thcsdongtan.edu.vn', status: 'ACTIVE' };
+      } else if (cleanUsername === 'phuhuynh01' && (cleanPassword === 'admin123' || cleanPassword === 'phuhuynh')) {
+        authenticatedUser = { id: 4, username: 'phuhuynh01', fullName: 'Anh Trần Văn Bình (Phụ huynh em An 9A1)', role: 'PHU_HUYNH', email: 'binhtran@gmail.com', status: 'ACTIVE' };
+      } else if (cleanUsername === 'giaovien_toan' && (cleanPassword === 'admin123' || cleanPassword === 'giaovien')) {
+        authenticatedUser = { id: 5, username: 'giaovien_toan', fullName: 'Cô Lê Thị Thu - Giáo Viên Toán', role: 'GIAO_VIEN', email: 'thule@thcsdongtan.edu.vn', status: 'ACTIVE' };
       }
     }
 
@@ -132,10 +136,46 @@ export default function LoginModal({ onClose, onLoginSuccess, onOpenRegister }) 
             <div style={{ width: '48px', height: '48px', background: '#e0f2fe', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 10px auto' }}>
               <Lock size={24} color="#0056a6" />
             </div>
-            <h3 style={{ fontSize: '16px', color: '#003a73', margin: 0, fontWeight: '800' }}>CỔNG ĐĂNG NHẬP DÙNG CHUNG</h3>
+            <h3 style={{ fontSize: '16px', color: '#003a73', margin: 0, fontWeight: '800' }}>CỔNG ĐĂNG NHẬP THÀNH VIÊN</h3>
             <p style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
-              Dành cho Ban Giám Hiệu, Giáo Viên, Phụ Huynh & Học Sinh THCS Đồng Tân
+              Chọn vai trò hoặc nhập tên tài khoản & mật khẩu cá nhân
             </p>
+
+            {/* Quick Demo Role Selector */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '6px', marginTop: '10px' }}>
+              <button
+                type="button"
+                onClick={() => { setUsername('hocsinh01'); setPassword('admin123'); setError(''); }}
+                style={{ background: '#e0f2fe', border: '1px solid #7dd3fc', color: '#0369a1', padding: '6px 4px', borderRadius: '6px', fontSize: '11.5px', fontWeight: '700', cursor: 'pointer', textAlign: 'center' }}
+                title="Bấm để nạp sẵn tài khoản Học Sinh An 9A1"
+              >
+                🎓 Học Sinh
+              </button>
+              <button
+                type="button"
+                onClick={() => { setUsername('phuhuynh01'); setPassword('admin123'); setError(''); }}
+                style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#b45309', padding: '6px 4px', borderRadius: '6px', fontSize: '11.5px', fontWeight: '700', cursor: 'pointer', textAlign: 'center' }}
+                title="Bấm để nạp sẵn tài khoản Phụ Huynh An 9A1"
+              >
+                👨‍👩‍👧 Phụ Huynh
+              </button>
+              <button
+                type="button"
+                onClick={() => { setUsername('giaovien'); setPassword('admin123'); setError(''); }}
+                style={{ background: '#f3e8ff', border: '1px solid #ddd6fe', color: '#6b21a8', padding: '6px 4px', borderRadius: '6px', fontSize: '11.5px', fontWeight: '700', cursor: 'pointer', textAlign: 'center' }}
+                title="Bấm để nạp sẵn tài khoản Giáo Viên Hoa"
+              >
+                👩‍🏫 Giáo Viên
+              </button>
+              <button
+                type="button"
+                onClick={() => { setUsername('admin'); setPassword('admin123'); setError(''); }}
+                style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#991b1b', padding: '6px 4px', borderRadius: '6px', fontSize: '11.5px', fontWeight: '700', cursor: 'pointer', textAlign: 'center' }}
+                title="Bấm để nạp sẵn tài khoản Ban Giám Hiệu"
+              >
+                🛡️ BGH Admin
+              </button>
+            </div>
           </div>
 
           {error && (

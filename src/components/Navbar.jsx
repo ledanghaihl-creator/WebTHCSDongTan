@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Home, Info, Newspaper, FileText, Image, Video, BookOpen, Calendar, Mail, ShieldAlert, Upload, UserPlus, Layers, KeyRound, LogOut, ChevronDown, UserCheck, LogIn } from 'lucide-react';
+import { Home, Info, Newspaper, FileText, Image, Video, BookOpen, Calendar, Mail, ShieldAlert, Upload, UserPlus, Layers, KeyRound, LogOut, ChevronDown, UserCheck, LogIn, LayoutDashboard } from 'lucide-react';
 
-export default function Navbar({ user, activeTab, setActiveTab, onOpenAdmin, onOpenUpload, onOpenBulkUpload, onOpenRegister, onOpenLogin, onOpenChangePassword, onLogout }) {
+export default function Navbar({ user, activeTab, setActiveTab, onOpenAdmin, onOpenUpload, onOpenBulkUpload, onOpenRegister, onOpenLogin, onOpenChangePassword, onOpenMemberZone, onLogout }) {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   const navs = [
@@ -77,7 +77,7 @@ export default function Navbar({ user, activeTab, setActiveTab, onOpenAdmin, onO
             className="nav-item admin-btn" 
             style={{ background: '#0056a6', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
             onClick={() => setShowUserDropdown(!showUserDropdown)}
-            title="Bấm vào tên để mở menu tài khoản và Đổi Mật Khẩu"
+            title="Bấm vào tên để mở menu tài khoản và Góc Thành Viên"
           >
             <UserCheck size={16} />
             <span>👤 {user.fullName || user.username}</span>
@@ -94,13 +94,22 @@ export default function Navbar({ user, activeTab, setActiveTab, onOpenAdmin, onO
               borderRadius: '8px',
               padding: '6px 0',
               zIndex: 1000,
-              minWidth: '200px',
+              minWidth: '220px',
               border: '1px solid #cbd5e1',
               marginTop: '4px'
             }}>
               <div style={{ padding: '8px 14px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '12px', color: '#64748b' }}>
                 Đang đăng nhập: <strong style={{ color: '#003a73', display: 'block', fontSize: '13px' }}>{user.fullName || user.username}</strong>
+                <span style={{ color: '#0284c7', fontSize: '11.5px', fontWeight: '700' }}>[{getRoleBadge(user.role)}]</span>
               </div>
+              
+              <button
+                onClick={() => { setShowUserDropdown(false); if (onOpenMemberZone) onOpenMemberZone(); }}
+                style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: '#f0f9ff', border: 'none', borderBottom: '1px solid #e2e8f0', cursor: 'pointer', fontSize: '13px', fontWeight: '800', color: '#0284c7', display: 'flex', alignItems: 'center', gap: '8px' }}
+              >
+                <LayoutDashboard size={16} color="#0284c7" /> 📊 Góc Thành Viên ({getRoleBadge(user.role)})
+              </button>
+
               <button
                 onClick={() => { setShowUserDropdown(false); if (onOpenChangePassword) onOpenChangePassword(); }}
                 style={{ width: '100%', padding: '10px 14px', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', fontSize: '13px', fontWeight: '700', color: '#7c3aed', display: 'flex', alignItems: 'center', gap: '8px' }}

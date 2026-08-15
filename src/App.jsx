@@ -12,6 +12,7 @@ import BulkUploadModal from './components/BulkUploadModal';
 import RegisterModal from './components/RegisterModal';
 import LoginModal from './components/LoginModal';
 import ChangePasswordModal from './components/ChangePasswordModal';
+import MemberDashboardModal from './components/MemberDashboardModal';
 import AdminPortal from './components/AdminPortal';
 import IntroView from './components/IntroView';
 import AlbumsView from './components/AlbumsView';
@@ -177,6 +178,7 @@ export default function App() {
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [showMemberDashboardModal, setShowMemberDashboardModal] = useState(false);
 
   // Sync quickLinks to LocalStorage
   useEffect(() => {
@@ -548,6 +550,7 @@ export default function App() {
         onOpenRegister={() => setShowRegisterModal(true)}
         onOpenLogin={() => setShowLoginModal(true)}
         onOpenChangePassword={() => setShowChangePasswordModal(true)}
+        onOpenMemberZone={() => setShowMemberDashboardModal(true)}
         onLogout={handleLogout}
       />
 
@@ -740,6 +743,22 @@ export default function App() {
           user={user}
           onClose={() => setShowChangePasswordModal(false)}
           onSuccess={() => setShowChangePasswordModal(false)}
+        />
+      )}
+
+      {/* Dedicated Member Dashboard Modal */}
+      {showMemberDashboardModal && (
+        <MemberDashboardModal 
+          user={user}
+          onClose={() => setShowMemberDashboardModal(false)}
+          onOpenChangePassword={() => {
+            setShowMemberDashboardModal(false);
+            setShowChangePasswordModal(true);
+          }}
+          onOpenAdmin={() => {
+            setShowMemberDashboardModal(false);
+            setActiveTab('admin');
+          }}
         />
       )}
 
