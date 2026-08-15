@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Home, Info, Newspaper, FileText, Image, Video, BookOpen, Calendar, Mail, ShieldAlert, Upload, UserPlus, Layers, KeyRound, LogOut, ChevronDown, UserCheck } from 'lucide-react';
+import { Home, Info, Newspaper, FileText, Image, Video, BookOpen, Calendar, Mail, ShieldAlert, Upload, UserPlus, Layers, KeyRound, LogOut, ChevronDown, UserCheck, LogIn } from 'lucide-react';
 
-export default function Navbar({ user, activeTab, setActiveTab, onOpenAdmin, onOpenUpload, onOpenBulkUpload, onOpenRegister, onOpenChangePassword, onLogout }) {
+export default function Navbar({ user, activeTab, setActiveTab, onOpenAdmin, onOpenUpload, onOpenBulkUpload, onOpenRegister, onOpenLogin, onOpenChangePassword, onLogout }) {
   const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   const navs = [
@@ -16,6 +16,16 @@ export default function Navbar({ user, activeTab, setActiveTab, onOpenAdmin, onO
     { id: 'contact', label: 'Liên hệ', icon: <Mail size={15} /> },
   ];
 
+  const getRoleBadge = (role) => {
+    switch (role) {
+      case 'BGH': return 'Ban Giám Hiệu';
+      case 'GIAO_VIEN': return 'Giáo Viên';
+      case 'HOC_SINH': return 'Học Sinh';
+      case 'PHU_HUYNH': return 'Phụ Huynh';
+      default: return 'Thành Viên';
+    }
+  };
+
   return (
     <nav className="main-navbar" style={{ position: 'relative' }}>
       {navs.map((nav) => (
@@ -29,8 +39,16 @@ export default function Navbar({ user, activeTab, setActiveTab, onOpenAdmin, onO
         </a>
       ))}
 
+      {/* Member Login Button */}
+      {!user && (
+        <a className="nav-item" style={{ background: '#0284c7', fontWeight: '700', marginLeft: 'auto' }} onClick={onOpenLogin}>
+          <LogIn size={15} />
+          <span>🔑 Đăng Nhập</span>
+        </a>
+      )}
+
       {/* Register Member Button */}
-      <a className="nav-item" style={{ background: '#d97706', fontWeight: '700', marginLeft: 'auto' }} onClick={onOpenRegister}>
+      <a className="nav-item" style={{ background: '#d97706', fontWeight: '700', marginLeft: !user ? '0' : 'auto' }} onClick={onOpenRegister}>
         <UserPlus size={15} />
         <span>👤 Đăng Ký</span>
       </a>

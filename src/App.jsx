@@ -10,6 +10,7 @@ import DocumentDetailModal from './components/DocumentDetailModal';
 import QuickUploadModal from './components/QuickUploadModal';
 import BulkUploadModal from './components/BulkUploadModal';
 import RegisterModal from './components/RegisterModal';
+import LoginModal from './components/LoginModal';
 import ChangePasswordModal from './components/ChangePasswordModal';
 import AdminPortal from './components/AdminPortal';
 import IntroView from './components/IntroView';
@@ -174,6 +175,7 @@ export default function App() {
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [uploadDefaultTab, setUploadDefaultTab] = useState('docs');
   const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
   // Sync quickLinks to LocalStorage
@@ -544,6 +546,7 @@ export default function App() {
         onOpenUpload={() => handleOpenUpload('docs')}
         onOpenBulkUpload={handleOpenBulkUpload}
         onOpenRegister={() => setShowRegisterModal(true)}
+        onOpenLogin={() => setShowLoginModal(true)}
         onOpenChangePassword={() => setShowChangePasswordModal(true)}
         onLogout={handleLogout}
       />
@@ -713,6 +716,21 @@ export default function App() {
         <RegisterModal 
           onClose={() => setShowRegisterModal(false)} 
           onRegisterSuccess={handleRegisterSuccess}
+        />
+      )}
+
+      {/* Member Login Modal */}
+      {showLoginModal && (
+        <LoginModal 
+          onClose={() => setShowLoginModal(false)}
+          onLoginSuccess={(newToken, newUser) => {
+            handleLoginSuccess(newToken, newUser);
+            setShowLoginModal(false);
+          }}
+          onOpenRegister={() => {
+            setShowLoginModal(false);
+            setShowRegisterModal(true);
+          }}
         />
       )}
 
